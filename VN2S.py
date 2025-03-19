@@ -64,7 +64,7 @@ def main():
         n_speakers=hps.data.n_speakers,
         **hps.model
     ).to(device)
-    
+
     utils.load_checkpoint(MODEL_PATH, model, None)
     model.eval()
 
@@ -76,16 +76,19 @@ def main():
     while True:
         time.sleep(0.2)
         current_clipboard_content = pyperclip.paste()
+        if current_clipboard_content[0] == "「" and current_clipboard_content[-1] == "」":
+            continue
 
-        if current_clipboard_content != last_clipboard_content:
-            # Generate and play audio
-            try:
-                audio = generate_audio(current_clipboard_content, model, SPEAKER_ID)
-                play_audio(audio, SAMPLE_RATE)
-            except Exception as e:
-                print(f"Error generating or playing audio: {e}")
-
-            last_clipboard_content = current_clipboard_content  # Update last clipboard content
+        else:
+            if current_clipboard_content != last_clipboard_content:
+                # Generate and play audio
+                try:
+                    audio = generate_audio(current_clipboard_content, model, SPEAKER_ID)
+                    play_audio(audio, SAMPLE_RATE)
+                except Exception as e:
+                    print(f"Error generating or playing audio: {e}")
+    
+                last_clipboard_content = current_clipboard_content  # Update last clipboard content
 
         time.sleep(1)
 
