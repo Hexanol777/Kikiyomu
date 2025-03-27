@@ -15,7 +15,32 @@ SPEAKER_ID = 0  # Set your speaker ID here
 LANGUAGE = "JA"  # Always Japanese
 SAMPLE_RATE = 22050  # Sample rate for audio playback
 
-def generate_audio(text, model, speaker_id, noise_scale=0.6, noise_scale_w=0.668, length_scale=1.0):
+def is_valid_text(text):
+    """Check if clipboard content is valid text for TTS"""
+
+    # Skip if text is empty
+    if not text or not isinstance(text, str):
+        return False
+    
+    # Skip if text is too long (might be something user decided to copy while program was running)
+    if len(text.strip()) > 100:
+        return False
+        
+    # Skip if text contains common image file extensions
+    image_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff']
+    if any(ext in text.lower() for ext in image_extensions):
+        return False
+        
+    # Skip if text contains opening and closing signs since they are usually voiced (besides the MC :( )
+    if text[0] == "「" and text[-1] == "」":
+        return False
+        
+    return True
+
+def generate_audio(text, model, speaker_id, 
+                   noise_scale=0.6, 
+                   noise_scale_w=0.668, 
+                   length_scale=1.1): # Playback speed
     # Preprocess text
     text = text.replace('\n', ' ').replace('\r', '').replace(" ", "")
     text = f"_[JA]{text}___[JA]"  # Wrap with Japanese tags
@@ -64,7 +89,7 @@ def main():
         n_speakers=hps.data.n_speakers,
         **hps.model
     ).to(device)
-
+    
     utils.load_checkpoint(MODEL_PATH, model, None)
     model.eval()
 
@@ -76,7 +101,10 @@ def main():
     while True:
         time.sleep(0.2)
         current_clipboard_content = pyperclip.paste()
-        if current_clipboard_content[0] == "「" and current_clipboard_content[-1] == "」":
+
+        # Skip if clipboard unchanged or invalid
+        if current_clipboard_content == last_clipboard_content or not is_valid_text(current_clipboard_content):
+            time.sleep(0.2)
             continue
 
         else:
