@@ -34,6 +34,24 @@ def is_valid_text(text):
     # Skip if text contains opening and closing signs since they are usually voiced (besides the MC :( )
     if text[0] == "「" and text[-1] == "」":
         return False
+
+    # Check for hp chars (hiragana, katakana, kanji and punctuations)
+    jp_ranges = [
+        (0x3040, 0x309F),  # Hiragana
+        (0x30A0, 0x30FF),  # Katakana
+        (0x4E00, 0x9FAF),  # Common Kanji
+        (0x3400, 0x4DBF),  # Rare Kanji
+        (0x3000, 0x303F)   # Japanese punctuation/symbols
+    ]
+    
+    has_japanese = any(
+        any(start <= ord(char) <= end for char in text[:20]  # Check first 20 chars
+            for start, end in jp_ranges)
+    )
+    
+    # Skip if no jp chars found
+    if not has_japanese:
+        return False
         
     return True
 
