@@ -12,8 +12,7 @@ from text import text_to_sequence
 MODEL_PATH = "models/herta.pth"  # Set your model path here
 CONFIG_PATH = "config/config.json"  # Set your config path here
 SPEAKER_ID = 0  # Set your speaker ID here
-LANGUAGE = "JA"  # Always Japanese
-SAMPLE_RATE = 22050  # Sample rate for audio playback
+SAMPLE_RATE = 22050  # Sample rate for audio playback used by sd
 
 def is_valid_text(text):
     """Check if clipboard content is valid text for TTS"""
@@ -44,21 +43,21 @@ def is_valid_text(text):
         (0x3000, 0x303F)   # Japanese punctuation/symbols
     ]
     
-    has_japanese = any(
-        any(start <= ord(char) <= end for char in text[:20]  # Check first 20 chars
-            for start, end in jp_ranges)
-    )
+    # Check each character in the text
+    for char in text[:20]:  # Only check first 20 chars for performance
+        char_code = ord(char)
+        for start, end in jp_ranges:
+            if start <= char_code <= end:
+                return True  # Found at least one Japanese character
     
-    # Skip if no jp chars found
-    if not has_japanese:
-        return False
-        
-    return True
+    return False  # No Japanese characters found
+    
 
 def generate_audio(text, model, speaker_id, 
-                   noise_scale=0.6, 
+                   noise_scale=0.6,
                    noise_scale_w=0.668, 
                    length_scale=1.1): # Playback speed
+    
     # Preprocess text
     text = text.replace('\n', ' ').replace('\r', '').replace(" ", "")
     text = f"_[JA]{text}___[JA]"  # Wrap with Japanese tags
@@ -127,6 +126,7 @@ def main():
 
         else:
             if current_clipboard_content != last_clipboard_content:
+                
                 # Generate and play audio
                 try:
                     audio = generate_audio(current_clipboard_content, model, SPEAKER_ID)
