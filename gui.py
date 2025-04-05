@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
+import KikiYomu
 
 # --- Individual widget classes ---
 
@@ -90,17 +91,19 @@ class KikiYomuApp:
         self.root = root
         self.root.title("KikiYomu")
         self.root.geometry("900x400")
+        self.root.minsize(900, 400)
+        self.root.maxsize(900, 400)
         
         # Configure the grid to have three vertical sections
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)  # Left section
-        self.root.grid_columnconfigure(1, weight=2)  # Middle section
+        self.root.grid_columnconfigure(1, weight=3)  # Middle section
         self.root.grid_columnconfigure(2, weight=1)  # Right section
         
         # Left Section: Model selection
         self.left_frame = ttk.Frame(root, padding=10, relief="groove")
         self.left_frame.grid(row=0, column=0, sticky="nsew")
-        ttk.Label(self.left_frame, text="Models", font=("Segoe UI", 10, "bold")).pack(anchor="nw")
+        ttk.Label(self.left_frame, text="Models", font=("Segoe UI", 10, "bold")).pack(anchor="center")
         self.model_tree = ModelTreeView(self.left_frame)
         self.model_tree.pack(fill="both", expand=True, pady=(5, 5))
         self.select_model_btn = ttk.Button(self.left_frame, text="Select Model", command=self.select_model)
@@ -109,14 +112,14 @@ class KikiYomuApp:
         # Middle Section: Clipboard history
         self.middle_frame = ttk.Frame(root, padding=10, relief="groove")
         self.middle_frame.grid(row=0, column=1, sticky="nsew")
-        ttk.Label(self.middle_frame, text="Clipboard History", font=("Segoe UI", 10, "bold")).pack(anchor="nw")
+        ttk.Label(self.middle_frame, text="Clipboard History", font=("Segoe UI", 10, "bold")).pack(anchor="center")
         self.history_text = HistoryTextBox(self.middle_frame)
-        self.history_text.pack(fill="both", expand=True, pady=(5, 5))
+        self.history_text.pack(fill="both", expand=True, pady=(5, 40))
         
         # Right Section: Options
         self.right_frame = ttk.Frame(root, padding=10, relief="groove")
         self.right_frame.grid(row=0, column=2, sticky="nsew")
-        ttk.Label(self.right_frame, text="Options", font=("Segoe UI", 10, "bold")).pack(anchor="nw")
+        ttk.Label(self.right_frame, text="Options", font=("Segoe UI", 10, "bold")).pack(anchor="center")
         
         # Use SignEntry class for opening and closing signs
         self.opening_sign = SignEntry(self.right_frame, label_text="Opening Sign:", default_value="[")
@@ -130,6 +133,7 @@ class KikiYomuApp:
         
     def select_model(self):
         model = self.model_tree.get_selected_model()
+        MODEL_PATH = f"models/{model}"
         if model:
             self.history_text.append_text(f"Selected Model: {model}")
         else:
