@@ -130,10 +130,25 @@ class KikiYomuApp:
         # Playback slider
         self.playback_slider = PlaybackSlider(self.right_frame, from_=0.5, to=2.0, initial=1.0)
         self.playback_slider.pack(fill="x", pady=(10, 5))
+
+        # Updating the playback speed using the slider
+        self.playback_speed = self.playback_slider.get()
+        self.playback_slider.speed_var.trace("w", self.update_playback_speed)
+
+    def update_playback_speed(self, *args):
+        current = self.playback_slider.get()
+
+        # Round to nearest 0.05
+        new_val = round(current / 0.05) * 0.05
+        if abs(new_val - current) > 1e-6:
+            self.playback_slider.speed_var.set(new_val)
+        self.playback_speed = new_val
+        print(self.playback_speed)
+        
+        # self.history_text.append_text(f"Playback Speed changed to: {self.playback_speed:.2f}")
         
     def select_model(self):
         model = self.model_tree.get_selected_model()
-        MODEL_PATH = f"models/{model}"
         if model:
             self.history_text.append_text(f"Selected Model: {model}")
         else:
