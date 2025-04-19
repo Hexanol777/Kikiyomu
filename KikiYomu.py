@@ -34,7 +34,7 @@ def is_valid_text(text):
     if text[0] == "「" and text[-1] == "」":
         return False
 
-    # Check for hp chars (hiragana, katakana, kanji and punctuations)
+    # Check for jp chars (hiragana, katakana, kanji and punctuations)
     jp_ranges = [
         (0x3040, 0x309F),  # Hiragana
         (0x30A0, 0x30FF),  # Katakana
@@ -60,7 +60,7 @@ def generate_audio(text, model, speaker_id,
     
     # Preprocess text
     text = text.replace('\n', ' ').replace('\r', '').replace(" ", "")
-    text = f"_[JA]{text}___[JA]"  # Wrap with Japanese tags
+    text = f"_[JA]{text}__[JA]"  # Wrap with Japanese tags
     
     # Convert text to sequence
     stn_tst, _ = text_to_sequence(text, hps.symbols, hps.data.text_cleaners)
