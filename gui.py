@@ -46,7 +46,6 @@ def is_valid_text(text, open_sign="「", close_sign="」"):
 
 def generate_audio(text, model, hps, speaker_id, length_scale=1.1):
     text = text.replace('\n', '').replace('\r', '').replace(" ", "")
-    
     text = f"_[JA]{text}__[JA]"
     stn_tst, _ = text_to_sequence(text, hps.symbols, hps.data.text_cleaners)
     if hps.data.add_blank:
@@ -251,8 +250,10 @@ class KikiYomuApp:
                     self.history.append_text(text)
                     try:
                         if self.model and self.hps:
+                            processed_text = self.remove_speaker_name(text)
+
                             audio = generate_audio(
-                                text, self.model, self.hps, SPEAKER_ID,
+                                processed_text, self.model, self.hps, SPEAKER_ID,
                                 length_scale=self.playback_slider.get()
                             )
                             play_audio(audio)
@@ -263,6 +264,7 @@ class KikiYomuApp:
                 time.sleep(0.2)
 
         threading.Thread(target=loop, daemon=True).start()
+
 
 
 # --- Entry Point ---
