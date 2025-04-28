@@ -146,19 +146,20 @@ class KikiYomuApp:
     def __init__(self, root):
         self.root = root
         self.root.title("KikiYomu")
-        self.root.geometry("900x400")
+        self.root.geometry("1000x400")
         self.root.resizable(False, False)
 
         # Layout frames
         self.root.columnconfigure((0, 1, 2), weight=1)
         self.root.rowconfigure(0, weight=1)
 
-        self.left = ttk.Frame(root, padding=10)
-        self.middle = ttk.Frame(root, padding=10)
-        self.right = ttk.Frame(root, padding=10)
-        self.left.grid(row=0, column=0, sticky="nsew")
-        self.middle.grid(row=0, column=1, sticky="nsew")
-        self.right.grid(row=0, column=2, sticky="nsew")
+        self.left = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
+        self.middle = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
+        self.right = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
+
+        self.left.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        self.middle.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
+        self.right.grid(row=0, column=2, sticky="nsew", padx=2, pady=2)
 
         # Left
         ttk.Label(self.left, text="Models", font=("Segoe UI", 10, "bold")).pack()
