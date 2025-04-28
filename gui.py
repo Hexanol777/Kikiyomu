@@ -7,6 +7,7 @@ import pyperclip
 import torch
 import numpy as np
 import sounddevice as sd
+import re
 
 from models import SynthesizerTrn
 import utils
@@ -24,11 +25,14 @@ SPEAKER_ID = 0
 def is_valid_text(text, open_sign="「", close_sign="」"):
     if not text or not isinstance(text, str):
         return False
+    
     if len(text.strip()) > 100:
         return False
+    
     image_exts = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff"]
     if any(ext in text.lower() for ext in image_exts):
         return False
+    
     if text.startswith(open_sign) and text.endswith(close_sign):
         return False
 
@@ -36,11 +40,13 @@ def is_valid_text(text, open_sign="「", close_sign="」"):
         (0x3040, 0x309F), (0x30A0, 0x30FF), (0x4E00, 0x9FAF),
         (0x3400, 0x4DBF), (0x3000, 0x303F)
     ]
+    
     return any(any(start <= ord(c) <= end for start, end in jp_ranges) for c in text[:20])
 
 
 def generate_audio(text, model, hps, speaker_id, length_scale=1.1):
     text = text.replace('\n', '').replace('\r', '').replace(" ", "")
+    
     text = f"_[JA]{text}__[JA]"
     stn_tst, _ = text_to_sequence(text, hps.symbols, hps.data.text_cleaners)
     if hps.data.add_blank:
@@ -181,6 +187,16 @@ class KikiYomuApp:
         self.playback_slider = PlaybackSlider(self.right)
         self.playback_slider.pack(fill="x", pady=10)
 
+        # Checkbox for removing speaker names
+        self.remove_speaker_var = tk.BooleanVar(value=True)
+        self.remove_speaker_checkbox = ttk.Checkbutton(
+            self.right,
+            text="RPGMaker\n WolfRPG",
+            variable=self.remove_speaker_var
+        )
+        self.remove_speaker_checkbox.pack(anchor="w", pady=(10, 0))
+
+
         self.model = None
         self.hps = None
         self.last_clip = ""
@@ -208,6 +224,15 @@ class KikiYomuApp:
         self.model.eval()
         self.model.device = self.device
         self.history.append_text(f"Model loaded: {model_file}")
+
+    def remove_speaker_name(self, text):
+        """remove 【Speaker】 patterns from the beginning if the checkbox is enabled."""
+        if self.remove_speaker_var.get():
+            if text.startswith("【"):
+                closing_index = text.find("】")
+                if closing_index != -1 and closing_index != len(text) - 1:
+                    return text[closing_index + 1:].lstrip()
+        return text
 
     def start_monitoring(self):
         def loop():
