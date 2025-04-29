@@ -143,6 +143,37 @@ class PlaybackSlider(ttk.Frame):
 
     def get(self):
         return self.var.get()
+    
+
+class ToolTip: # Hovering message ToolTip
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip_window = None
+        widget.bind("<Enter>", self.show_tip)
+        widget.bind("<Leave>", self.hide_tip)
+
+    def show_tip(self, event=None):
+        if self.tip_window or not self.text:
+            return
+        x, y, _cx, cy = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 30
+        y += self.widget.winfo_rooty() + cy + 15
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(
+            tw, text=self.text, justify="left",
+            background="#ffffe0", relief="solid", borderwidth=1,
+            font=("Segoe UI", 9)
+        )
+        label.pack(ipadx=1)
+
+    def hide_tip(self, event=None):
+        tw = self.tip_window
+        self.tip_window = None
+        if tw:
+            tw.destroy()
 
 
 # --- Main Application ---
@@ -181,10 +212,15 @@ class KikiYomuApp:
         ttk.Label(self.right, text="Options", font=("Segoe UI", 10, "bold")).pack()
         self.open_sign = SignEntry(self.right, "Opening Sign:", "「")
         self.open_sign.pack(fill="x", pady=5)
+        ToolTip(self.open_sign, "This is the character used to detect the start of spoken dialogue. Default is 「")
+
         self.close_sign = SignEntry(self.right, "Closing Sign:", "」")
         self.close_sign.pack(fill="x", pady=5)
+        ToolTip(self.close_sign, "This is the character used to detect the end of spoken dialogue. Default is 」")
+
         self.playback_slider = PlaybackSlider(self.right)
         self.playback_slider.pack(fill="x", pady=10)
+
 
         # Checkbox for removing speaker names
         self.remove_speaker_var = tk.BooleanVar(value=True)
@@ -194,6 +230,7 @@ class KikiYomuApp:
             variable=self.remove_speaker_var
         )
         self.remove_speaker_checkbox.pack(anchor="w", pady=(10, 0))
+        ToolTip(self.remove_speaker_checkbox, "Removes RPGMaker/WolfRPG speaker names in 【Name】 from the dialogue to avoid repetition.")
 
 
         self.model = None
