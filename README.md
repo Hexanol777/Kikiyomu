@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 Visit the following Hugging Face repository to download the Pretrained AI voice models:
 
-[AI-Voice mMdels](https://huggingface.co/spaces/zomehwh/vits-models/tree/main/pretrained_models)
+[AI-Voice Models](https://huggingface.co/spaces/zomehwh/vits-models/tree/main/pretrained_models)
 
 Place the .pth model files into the models/ directory.
 
