@@ -283,14 +283,18 @@ class KikiYomuApp:
                     return text[closing_index + 1:].lstrip()
         return text
     
-    def collapse_repetitions(text, min_len=2, max_len=10, threshold=2):
+    def collapse_repetitions(self, text, min_len=2, max_len=20, threshold=3):
         """ Detects substrings of length min_len–max_len that are repeated consecutively
         more than 'threshold' times and collapses them to a single instance. """
         if self.remove_repetition_var.get():
+            self.history.append_text("repetition detected")
             for l in range(max_len, min_len - 1, -1):
                 pattern = re.compile(rf'(({re.escape(text[:l])})\2{{{threshold},}})')
                 text = pattern.sub(r'\2', text)
             return text
+        else:
+            return text
+        
 
     def start_monitoring(self):
         def loop():
@@ -310,6 +314,7 @@ class KikiYomuApp:
                     try:
                         if self.model and self.hps:
                             processed_text = self.remove_speaker_name(text)
+                            processed_text = self.collapse_repetitions(processed_text)
 
 
                             audio = generate_audio(
