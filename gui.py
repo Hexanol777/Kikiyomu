@@ -44,6 +44,8 @@ def is_valid_text(text, open_sign="「", close_sign="」"):
     return any(any(start <= ord(c) <= end for start, end in jp_ranges) for c in text[:20])
 
 
+
+
 def generate_audio(text, model, hps, speaker_id, length_scale=1.1):
     text = text.replace('\n', '').replace('\r', '').replace(" ", "")
     text = f"_[JA]{text}__[JA]"
@@ -233,6 +235,17 @@ class KikiYomuApp:
         ToolTip(self.remove_speaker_checkbox, "Removes RPGMaker/WolfRPG speaker names in 【Name】 from the dialogue to avoid repetition.")
 
 
+        # Checkbox for scenarios where extracted text is being repeated
+        self.remove_repetition_var = tk.BooleanVar(value=False)
+        self.remove_repetition_checkbox = ttk.Checkbutton(
+            self.right,
+            text="Repeated\nText Filter",
+            variable=self.remove_repetition_var
+        )
+        self.remove_repetition_checkbox.pack(anchor="w", pady=(10, 0))
+        ToolTip(self.remove_repetition_checkbox, "Removes repetitions from extracted texts. Only use it when textractor can't filter repetitions")
+
+
         self.model = None
         self.hps = None
         self.last_clip = ""
@@ -269,6 +282,15 @@ class KikiYomuApp:
                 if closing_index != -1 and closing_index != len(text) - 1:
                     return text[closing_index + 1:].lstrip()
         return text
+    
+    def collapse_repetitions(text, min_len=2, max_len=10, threshold=2):
+        """ Detects substrings of length min_len–max_len that are repeated consecutively
+        more than 'threshold' times and collapses them to a single instance. """
+        if self.remove_repetition_var.get():
+            for l in range(max_len, min_len - 1, -1):
+                pattern = re.compile(rf'(({re.escape(text[:l])})\2{{{threshold},}})')
+                text = pattern.sub(r'\2', text)
+            return text
 
     def start_monitoring(self):
         def loop():
@@ -288,6 +310,7 @@ class KikiYomuApp:
                     try:
                         if self.model and self.hps:
                             processed_text = self.remove_speaker_name(text)
+
 
                             audio = generate_audio(
                                 processed_text, self.model, self.hps, SPEAKER_ID,
