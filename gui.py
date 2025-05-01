@@ -284,16 +284,24 @@ class KikiYomuApp:
         return text
     
     def collapse_repetitions(self, text, min_len=2, max_len=20, threshold=3):
-        """ Detects substrings of length min_len–max_len that are repeated consecutively
-        more than 'threshold' times and collapses them to a single instance. """
-        if self.remove_repetition_var.get():
-            self.history.append_text("repetition detected")
-            for l in range(max_len, min_len - 1, -1):
-                pattern = re.compile(rf'(({re.escape(text[:l])})\2{{{threshold},}})')
-                text = pattern.sub(r'\2', text)
+        """
+        - Collapses repeated substrings of length min_len–max_len repeated >= threshold times.
+        - Collapses full sentence-level repetition if the same sentence appears twice.
+        """
+        if not self.remove_repetition_var.get():
             return text
-        else:
-            return text
+
+        # initially Collapse repeated substrings
+        for l in range(max_len, min_len - 1, -1):
+            pattern = re.compile(rf'((.{{{l}}})\2{{{threshold - 1},}})')
+            text = pattern.sub(r'\2', text)
+
+        # then check entire sentence to remove duplicated (like A+A)
+        mid = len(text) // 2
+        if text[:mid] == text[mid:]:
+            text = text[:mid]
+
+        return text
         
 
     def start_monitoring(self):
