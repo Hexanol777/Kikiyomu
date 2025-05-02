@@ -9,7 +9,7 @@
 -  **Real-Time TTS**: Automatically reads aloud Japanese text copied to your clipboard.
 -  **Speaker Tag Handling**: Option to remove speaker tags like `【Name】` commonly found in RPGMaker and WolfRPG games.
 -  **Game Compatibility**: Designed to work well with most visual novels and games that use stylized dialogue formatting.
-- 🖱️ **User-Friendly GUI**: Simple GUI
+-  **User-Friendly GUI**: Simple GUI
 
 ---
 
@@ -47,6 +47,7 @@ Place the .pth model files into the models/ directory.
 ```bash
     python gui.py
 ```
+- Additionally you can just you run the `KikiYomu.py` file in command line as it still offers most utilities.
 2. Load a Model
 
 - In the "Models" panel, select a .pth model and click "Select Model".
