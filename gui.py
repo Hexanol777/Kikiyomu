@@ -283,25 +283,38 @@ class KikiYomuApp:
                     return text[closing_index + 1:].lstrip()
         return text
     
-    def collapse_repetitions(self, text, min_len=2, max_len=20, threshold=3):
-        """
-        - Collapses repeated substrings of length min_len–max_len repeated >= threshold times.
-        - Collapses full sentence-level repetition if the same sentence appears twice.
-        """
+    def collapse_repetitions(self, text, min_len=2, max_len=10, threshold=2):
+        """Removes both substring-level and sentence-level repetitions."""
         if not self.remove_repetition_var.get():
             return text
 
-        # initially Collapse repeated substrings
+        original = text
+
+        # Substring repetition removal
         for l in range(max_len, min_len - 1, -1):
             pattern = re.compile(rf'((.{{{l}}})\2{{{threshold - 1},}})')
             text = pattern.sub(r'\2', text)
 
-        # then check entire sentence to remove duplicated (like A+A)
+        # Fast exact A+A duplication removal
         mid = len(text) // 2
         if text[:mid] == text[mid:]:
             text = text[:mid]
 
+        # Sentence-level repetition removal
+        sentences = re.split(r'(?<=[。！？\n])', text)
+        seen = set()
+        result = []
+        for sentence in sentences:
+            s = sentence.strip()
+            if s and s not in seen:
+                seen.add(s)
+                result.append(s)
+        text = ''.join(result)
+
+        if text != original:
+            self.history.append_text("Repetition collapsed.")
         return text
+
         
 
     def start_monitoring(self):
