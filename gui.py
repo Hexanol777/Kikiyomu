@@ -311,13 +311,13 @@ class KikiYomuApp:
                 result.append(s)
         text = ''.join(result)
 
-        if text != original:
-            self.history.append_text("Repetition collapsed.")
         return text
 
         
 
     def start_monitoring(self):
+        self.history.append_text(f"Monitoring started...")
+        self.history.append_text(f"Models will use {self.device} as the device")
         def loop():
             self.running = True
             while self.running:
