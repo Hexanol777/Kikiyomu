@@ -26,7 +26,7 @@ def is_valid_text(text, open_sign="「", close_sign="」"):
     if not text or not isinstance(text, str):
         return False
     
-    if len(text.strip()) > 100:
+    if len(text.strip()) > 200:
         return False
     
     image_exts = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff"]
@@ -283,7 +283,7 @@ class KikiYomuApp:
                     return text[closing_index + 1:].lstrip()
         return text
     
-    def collapse_repetitions(self, text, min_len=2, max_len=10, threshold=2):
+    def collapse_repetitions(self, text, min_len=1, max_len=30, threshold=2):
         """Removes both substring-level and sentence-level repetitions."""
         if not self.remove_repetition_var.get():
             return text
@@ -312,8 +312,19 @@ class KikiYomuApp:
         text = ''.join(result)
 
         return text
+    
 
-        
+    def remove_consecutive_kanji_duplicates(self ,text):
+        # Replace any two identical kanji in a row with just one
+        #self.history.append_text(text[0:18])
+        #if text[0:5] == '時時間間帯帯':
+        #    text = text[18:]
+        return re.sub(r'([\u4e00-\u9fff])\1', '', text)
+    
+
+    def word_filter(self, wordlist):
+        """placeholder for a word list filtering function"""
+        pass
 
     def start_monitoring(self):
         self.history.append_text(f"Monitoring started...")
@@ -335,7 +346,10 @@ class KikiYomuApp:
                     try:
                         if self.model and self.hps:
                             processed_text = self.remove_speaker_name(text)
+                            processed_text = self.remove_consecutive_kanji_duplicates(processed_text)
                             processed_text = self.collapse_repetitions(processed_text)
+                            processed_text = self.jikantai(processed_text)
+                            
 
 
                             audio = generate_audio(
