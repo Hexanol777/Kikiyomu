@@ -347,10 +347,7 @@ class KikiYomuApp:
                         if self.model and self.hps:
                             processed_text = self.remove_speaker_name(text)
                             processed_text = self.remove_consecutive_kanji_duplicates(processed_text)
-                            processed_text = self.collapse_repetitions(processed_text)
-                            processed_text = self.jikantai(processed_text)
-                            
-
+                            processed_text = self.collapse_repetitions(processed_text)                            
 
                             audio = generate_audio(
                                 processed_text, self.model, self.hps, SPEAKER_ID,
