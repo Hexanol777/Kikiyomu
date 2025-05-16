@@ -184,11 +184,14 @@ class KikiYomuApp:
     def __init__(self, root):
         self.root = root
         self.root.title("KikiYomu")
-        self.root.geometry("1000x400")
+        self.root.geometry("1000x450")
         self.root.resizable(False, False)
 
         # Layout frames
-        self.root.columnconfigure((0, 1, 2), weight=1)
+        self.root.columnconfigure(0, weight=7)  # Left (unchanged)
+        self.root.columnconfigure(1, weight=3)  # Middle (reduced)
+        self.root.columnconfigure(2, weight=5)  # Right (wider)
+        
         self.root.rowconfigure(0, weight=1)
 
         self.left = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
@@ -225,7 +228,7 @@ class KikiYomuApp:
 
 
         # Checkbox for removing speaker names
-        self.remove_speaker_var = tk.BooleanVar(value=True)
+        self.remove_speaker_var = tk.BooleanVar(value=False)
         self.remove_speaker_checkbox = ttk.Checkbutton(
             self.right,
             text="RPGMaker\n WolfRPG",
@@ -240,10 +243,20 @@ class KikiYomuApp:
         self.remove_repetition_checkbox = ttk.Checkbutton(
             self.right,
             text="Repeated\nText Filter",
-            variable=self.remove_repetition_var
+            variable=self.remove_repetition_var,
+            command=self.toggle_custom_filter_entry
         )
         self.remove_repetition_checkbox.pack(anchor="w", pady=(10, 0))
         ToolTip(self.remove_repetition_checkbox, "Removes repetitions from extracted texts. Only use it when textractor can't filter repetitions")
+
+
+        # Custom filter field (initially hidden)
+        self.custom_filter_label = ttk.Label(self.right, text="Words to filter\n(comma separated):")
+        self.custom_filter_entry = tk.Text(self.right, height=3, width=25)
+        self.custom_filter_label.pack(anchor="w", pady=(5, 0))
+        self.custom_filter_entry.pack(fill="x")
+        self.custom_filter_label.pack_forget()
+        self.custom_filter_entry.pack_forget()
 
 
         self.model = None
@@ -320,11 +333,30 @@ class KikiYomuApp:
         #if text[0:5] == '時時間間帯帯':
         #    text = text[18:]
         return re.sub(r'([\u4e00-\u9fff])\1', '', text)
-    
 
-    def word_filter(self, wordlist):
-        """placeholder for a word list filtering function"""
-        pass
+
+    def word_filter(self, text):
+        raw_words = self.custom_filter_entry.get("1.0", "end").strip()
+        if not raw_words:
+            return text
+
+        wordlist = [word.strip() for word in raw_words.split(",") if word.strip()]
+        for word in wordlist:
+            text = text.replace(word, "")
+        return text
+
+
+    def toggle_custom_filter_entry(self):
+        """Toggle to Show/Hide the WordFilter entry box"""
+        if self.remove_repetition_var.get():
+            self.custom_filter_label.pack(anchor="w", pady=(5, 0))
+            self.custom_filter_entry.pack(fill="x")
+            self.history.append_text("WordFilter Enabled")
+        else:
+            self.custom_filter_label.pack_forget()
+            self.custom_filter_entry.pack_forget()
+            self.history.append_text("WordFilter Disabled")
+
 
     def start_monitoring(self):
         self.history.append_text(f"Monitoring started...")
@@ -347,7 +379,8 @@ class KikiYomuApp:
                         if self.model and self.hps:
                             processed_text = self.remove_speaker_name(text)
                             processed_text = self.remove_consecutive_kanji_duplicates(processed_text)
-                            processed_text = self.collapse_repetitions(processed_text)                            
+                            processed_text = self.collapse_repetitions(processed_text)          
+                            processed_text = self.word_filter(processed_text)                  
 
                             audio = generate_audio(
                                 processed_text, self.model, self.hps, SPEAKER_ID,
