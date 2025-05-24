@@ -144,7 +144,8 @@ class PlaybackSlider(ttk.Frame):
         self.var.trace("w", lambda *args: update(self.var.get()))
 
     def get(self):
-        return self.var.get()
+        val = self.var.get()
+        return 1.0 / val if val != 0 else 1.0
     
 
 class ToolTip: # Hovering message ToolTip
