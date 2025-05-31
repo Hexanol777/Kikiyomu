@@ -236,7 +236,7 @@ class KikiYomuApp:
             variable=self.remove_speaker_var
         )
         self.remove_speaker_checkbox.pack(anchor="w", pady=(10, 0))
-        ToolTip(self.remove_speaker_checkbox, "Removes RPGMaker/WolfRPG speaker names in 【Name】 from the dialogue to avoid repetition.")
+        ToolTip(self.remove_speaker_checkbox, "Removes RPGMaker/WolfRPG speaker names in【Name】from the dialogue to avoid repetition.")
 
 
         # Checkbox for scenarios where extracted text is being repeated
@@ -265,6 +265,9 @@ class KikiYomuApp:
         self.last_clip = ""
         self.running = False
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        #Keybind
+        self.root.bind("<Shift_R>", self.on_force_read)
 
         self.start_monitoring()
 
@@ -345,6 +348,21 @@ class KikiYomuApp:
         for word in wordlist:
             text = text.replace(word, "")
         return text
+    
+
+    def force_read(self, text): # Force-read lines upon user's request
+        audio = generate_audio(
+            text, self.model, self.hps, SPEAKER_ID,
+            length_scale=self.playback_slider.get()
+        )
+        play_audio(audio)
+
+    
+    def on_force_read(self, event=None): # Event trigger func
+        text = pyperclip.paste()
+        if text:
+            self.force_read(text)
+
 
 
     def toggle_custom_filter_entry(self):
