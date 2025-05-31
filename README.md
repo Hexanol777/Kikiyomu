@@ -10,6 +10,7 @@
 -  **Speaker Tag Handling**: Option to remove speaker tags like `【Name】` commonly found in RPGMaker and WolfRPG games.
 -  **Game Compatibility**: Designed to work well with most visual novels and games that use stylized dialogue formatting.
 -  **User-Friendly GUI**: Simple GUI
+-  **Manual Control Over TTS**: Lets the user Force-read texts even when filtered out by the model.
 
 ---
 
