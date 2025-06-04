@@ -14,6 +14,8 @@ import utils
 import commons
 from text import text_to_sequence
 
+import keyboard
+
 # --- Configuration ---
 CONFIG_PATH = "config/config.json"
 SAMPLE_RATE = 22050
@@ -266,8 +268,8 @@ class KikiYomuApp:
         self.running = False
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        #Keybind
-        self.root.bind("<Shift_R>", self.on_force_read)
+        #Keybinds
+        keyboard.add_hotkey("right shift", lambda: self.on_force_read())
 
         self.start_monitoring()
 
@@ -360,7 +362,8 @@ class KikiYomuApp:
     
     def on_force_read(self, event=None): # Event trigger func
         text = pyperclip.paste()
-        if text:
+        if is_valid_text(text, self.open_sign.get(), self.close_sign.get()):
+            self.history.append_text(f"[Force Read]: {text}")
             self.force_read(text)
 
 
