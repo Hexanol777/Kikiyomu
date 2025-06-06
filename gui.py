@@ -353,19 +353,21 @@ class KikiYomuApp:
     
 
     def force_read(self, text): # Force-read lines upon user's request
-        audio = generate_audio(
-            text, self.model, self.hps, SPEAKER_ID,
-            length_scale=self.playback_slider.get()
-        )
-        play_audio(audio)
+        if self.model and self.hps:
+            self.history.append_text(f"[Force Read]: {text}")
+            audio = generate_audio(
+                text, self.model, self.hps, SPEAKER_ID,
+                length_scale=self.playback_slider.get()
+            )
+            play_audio(audio)
+        else:
+            self.history.append_text("Model not loaded.")
 
     
     def on_force_read(self, event=None): # Event trigger func
         text = pyperclip.paste()
-        if is_valid_text(text, self.open_sign.get(), self.close_sign.get()):
-            self.history.append_text(f"[Force Read]: {text}")
-            self.force_read(text)
-
+        #if is_valid_text(text, self.open_sign.get(), self.close_sign.get()):
+        self.force_read(text)
 
 
     def toggle_custom_filter_entry(self):
