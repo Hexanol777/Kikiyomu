@@ -390,8 +390,9 @@ class KikiYomuApp:
 
 
     def start_monitoring(self):
-        self.history.append_text(f"Monitoring started...")
-        self.history.append_text(f"Models will use {self.device} as the device")
+        self.history.append_text("Monitoring has started.")
+        self.history.append_text(f"Inference device: {self.device}\n")
+        self.history.append_text("Available Hotkeys:\n  Left Shift  →  Force read current clipboard text")
         def loop():
             self.running = True
             while self.running:
