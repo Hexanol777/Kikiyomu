@@ -366,8 +366,15 @@ class KikiYomuApp:
     
     def on_force_read(self, event=None): # Event trigger func
         text = pyperclip.paste()
-        #if is_valid_text(text, self.open_sign.get(), self.close_sign.get()):
-        self.force_read(text)
+        open_sign = self.open_sign.get()
+        close_sign = self.close_sign.get()
+        
+        # removing open and close signs to bypass filters
+        if text.startswith(open_sign) and text.endswith(close_sign): 
+            text = text[len(open_sign):-len(close_sign)].strip()
+
+        if is_valid_text(text, self.open_sign.get(), self.close_sign.get()):
+            self.force_read(text)
 
 
     def toggle_custom_filter_entry(self):
