@@ -94,9 +94,11 @@ class ModelTreeView(ttk.Frame):
         self.tree = ttk.Treeview(self, columns=("Model",), show="headings", selectmode="browse")
         self.tree.heading("Model", text="Model")
         self.tree.pack(side="left", fill="both", expand=True)
+
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         scrollbar.pack(side="right", fill="y")
         self.tree.config(yscrollcommand=scrollbar.set)
+
         self.load_models()
 
     def load_models(self):
@@ -110,6 +112,7 @@ class ModelTreeView(ttk.Frame):
         if selected:
             return self.tree.item(selected[0])["values"][0]
         return None
+    
 
 
 class HistoryTextBox(ttk.Frame):
@@ -148,7 +151,7 @@ class PlaybackSlider(ttk.Frame):
     def get(self):
         val = self.var.get()
         return 1.0 / val if val != 0 else 1.0
-    
+
 
 class ToolTip: # Hovering message ToolTip
     def __init__(self, widget, text):
@@ -212,7 +215,7 @@ class KikiYomuApp:
         ttk.Button(self.left, text="Select Model", command=self.load_model).pack(fill="x")
 
         # Middle
-        ttk.Label(self.middle, text="Clipboard History", font=("Segoe UI", 10, "bold")).pack()
+        ttk.Label(self.middle, text="Log", font=("Segoe UI", 10, "bold")).pack()
         self.history = HistoryTextBox(self.middle)
         self.history.pack(fill="both", expand=True, pady=5)
 
@@ -334,6 +337,7 @@ class KikiYomuApp:
     
 
     def remove_consecutive_kanji_duplicates(self ,text):
+        """Removes Kanji repetition, useful in the case of javascript hooks in RPGM games."""
         # Replace any two identical kanji in a row with just one
         #self.history.append_text(text[0:18])
         #if text[0:5] == '時時間間帯帯':
@@ -342,6 +346,7 @@ class KikiYomuApp:
 
 
     def word_filter(self, text):
+        """Filters words given by user."""
         raw_words = self.custom_filter_entry.get("1.0", "end").strip()
         if not raw_words:
             return text
@@ -352,7 +357,8 @@ class KikiYomuApp:
         return text
     
 
-    def force_read(self, text): # Force-read lines upon user's request
+    def force_read(self, text):
+        """Forcefully reads last copied line upon the user's request."""
         if self.model and self.hps:
             self.history.append_text(f"[Force Read]: {text}")
             audio = generate_audio(
@@ -361,7 +367,7 @@ class KikiYomuApp:
             )
             play_audio(audio)
         else:
-            self.history.append_text("Model not loaded.")
+            self.history.append_text("[Force Read]: Model not loaded.")
 
     
     def on_force_read(self, event=None): # Event trigger func
@@ -392,7 +398,7 @@ class KikiYomuApp:
     def start_monitoring(self):
         self.history.append_text("Monitoring has started.")
         self.history.append_text(f"Inference device: {self.device}\n")
-        self.history.append_text("Available Hotkeys:\n  Left Shift  →  Force read current clipboard text")
+        self.history.append_text("Available Hotkeys:\n  Right Shift  →  Force read current clipboard text")
         def loop():
             self.running = True
             while self.running:
