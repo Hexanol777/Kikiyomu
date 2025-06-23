@@ -1,8 +1,13 @@
 cn2an==0.5.23
+easyocr==1.7.2
 jieba==0.42.1
+keyboard==0.13.5
 librosa==0.11.0
 numba==0.57.0
 numpy==1.24.3
+opencv_python==4.7.0.72
+opencv_python_headless==4.9.0.80
+Pillow==11.2.1
 pyopenjtalk==0.4.0
 pyperclip==1.8.2
 sounddevice==0.4.6
