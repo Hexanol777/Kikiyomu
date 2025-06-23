@@ -1,4 +1,3 @@
-import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
@@ -8,6 +7,7 @@ import torch
 import numpy as np
 import sounddevice as sd
 import re
+import os
 
 from models import SynthesizerTrn
 import utils
@@ -15,6 +15,8 @@ import commons
 from text import text_to_sequence
 
 import keyboard
+
+from ocr import get_clipboard_image, OCR
 
 # --- Configuration ---
 CONFIG_PATH = "config/config.json"
@@ -404,6 +406,12 @@ class KikiYomuApp:
             while self.running:
                 time.sleep(0.2)
                 text = pyperclip.paste()
+
+                # Check for image in Clipboard
+                #image = get_clipboard_image(text)
+                #if image:
+                #    text = OCR(image)
+
                 if (
                     text != self.last_clip and is_valid_text(
                         text,
