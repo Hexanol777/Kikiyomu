@@ -10,8 +10,8 @@ import urllib.request
 OCR_MODEL_DIR = "models/ocr"
 RECOGNITION_MODEL = "japanese_g2.pth"
 DETECTION_MODEL = "craft_mlt_25k.pth"
-RECOGNITION_URL = "https://www.jaided.ai/easyocr/models/japanese_g2.pth"
-DETECTION_URL = "https://www.jaided.ai/easyocr/models/craft_mlt_25k.pth"
+RECOGNITION_URL = "https://huggingface.co/xiaoyao9184/easyocr/resolve/master/japanese_g2.pth?download=true"
+DETECTION_URL = "https://huggingface.co/xiaoyao9184/easyocr/resolve/master/craft_mlt_25k.pth?download=true"
 
 # Ensuring the folder exists
 os.makedirs(OCR_MODEL_DIR, exist_ok=True)
@@ -37,27 +37,6 @@ def get_clipboard_image():
         image = Image.open(img)
         return image
     return None
-
-def detect_text_boxes(img):
-        
-        img_rgb = img
-        img_rgb = img_rgb.convert("RGB")
-        img_np = np.array(img_rgb)
-
-        # Cropped image bg
-        image_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
-
-        # Text region detection
-        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
-        sobel = cv2.Sobel(gray, cv2.CV_8U, 1, 0)
-        _, thresh = cv2.threshold(sobel, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 2))
-        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        boxes = [cv2.boundingRect(cnt) for cnt in contours if cv2.contourArea(cnt) > 100]
-        
-        return boxes, image_bgr
-
 
 def extract_text(image):
     extracted = []
