@@ -18,6 +18,9 @@ import keyboard
 
 from ocr import get_clipboard_image, OCR
 
+import hashlib
+import io
+
 # --- Configuration ---
 CONFIG_PATH = "config/config.json"
 SAMPLE_RATE = 22050
@@ -73,6 +76,15 @@ def play_audio(audio):
     audio = audio.astype(np.float32)
     sd.play(audio, SAMPLE_RATE)
     sd.wait()
+
+
+
+def hash_image(image):
+    """Generate a hash for an image to detect changes."""
+    with io.BytesIO() as buffer:
+        image.save(buffer, format='PNG')
+        return hashlib.md5(buffer.getvalue()).hexdigest()
+
 
 
 # --- GUI Widgets ---
@@ -272,6 +284,7 @@ class KikiYomuApp:
         self.last_clip = ""
         self.running = False
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.last_image_hash = None
 
         #Keybinds
         keyboard.add_hotkey("right shift", lambda: self.on_force_read())
@@ -406,11 +419,16 @@ class KikiYomuApp:
             while self.running:
                 time.sleep(0.2)
                 text = pyperclip.paste()
-
+        
                 # Check for image in Clipboard
-                #image = get_clipboard_image(text)
-                #if image:
-                #    text = OCR(image)
+                image = get_clipboard_image(text)
+                if image:
+                    current_hash = hash_image(image)
+                    if current_hash == self.last_image_hash:
+                        continue  # Skip if image is the same 
+
+                    self.last_image_hash = current_hash  # Update tracked hash
+                    text = OCR(image)
 
                 if (
                     text != self.last_clip and is_valid_text(
