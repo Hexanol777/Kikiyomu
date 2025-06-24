@@ -3,16 +3,21 @@ from PIL import ImageGrab, Image
 import numpy as np
 import cv2
 import os
+import urllib.request
 
 
 # Initialize once globally
-reader = easyocr.Reader(['ja'], gpu=False)
+if not os.path.exists("models/ocr/japanese_g2.pth"):
+    raise RuntimeError("Missing EasyOCR recognition model. Please place 'japanese_g2.pth' in models/eocr.")
+
+reader = easyocr.Reader(['ja'], gpu=True, model_storage_directory='models/ocr')
 
 def get_clipboard_image():
     """Returns an image from clipboard, or None if not an image."""
     img = ImageGrab.grabclipboard()
     if isinstance(img, Image.Image):
-        return img
+        image = Image.open(img)
+        return image
     return None
 
 def detect_text_boxes(img):
@@ -35,25 +40,25 @@ def detect_text_boxes(img):
         
         return boxes, image_bgr
 
-def extract_japanese_from_image(boxes, image_bgr):
 
-        # OCR
-        reader = easyocr.Reader(['ja'], gpu=False)
-        extracted = []
-        for x, y, w, h in boxes:
-            cropped = image_bgr[y:y+h, x:x+w]
-            result = reader.readtext(cropped, detail=0)
-            for txt in result:
-                if any('\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9faf' for c in txt): # Check for japanese ranges
-                    extracted.append(txt.strip())
+def extract_text(image):
+    extracted = []
 
-        return "\n".join(extracted) if extracted else None
+    img_rgb = image.convert("RGB")
+    img_np = np.array(img_rgb)
 
+    result = reader.readtext(img_np, detail=0)
 
+    for txt in result:
+        if any('\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9faf' for c in txt): # Check for japanese ranges
+            extracted.append(txt.strip())
+
+    
+    print ("\n".join(extracted))
+    return "\n".join(extracted) if extracted else None
 
 def OCR(image):
     """Performs OCR using the methods inside ocr.py"""
     boxes, image_bgr = detect_text_boxes(image)
-    extracted_text = extract_japanese_from_image(boxes, image_bgr)
-
+    extracted_text = extract_text(boxes, image_bgr)
     return extracted_text
