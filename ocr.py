@@ -1,9 +1,9 @@
 import easyocr
 from PIL import ImageGrab, Image
 import numpy as np
-import cv2
 import os
 import urllib.request
+import torch
 
 
 # CONS
@@ -26,6 +26,10 @@ def download_model(file_name, url):
 # Downloading the models
 download_model(RECOGNITION_MODEL, RECOGNITION_URL)
 download_model(DETECTION_MODEL, DETECTION_URL)
+
+
+# Safe GPU fallback
+use_gpu = torch.cuda.is_available()
 
 # Set reader
 reader = easyocr.Reader(['ja'], gpu=True, model_storage_directory='models/ocr')
