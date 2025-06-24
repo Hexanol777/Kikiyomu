@@ -6,10 +6,28 @@ import os
 import urllib.request
 
 
-# Initialize once globally
-if not os.path.exists("models/ocr/japanese_g2.pth"):
-    raise RuntimeError("Missing EasyOCR recognition model. Please place 'japanese_g2.pth' in models/eocr.")
+# CONS
+OCR_MODEL_DIR = "models/ocr"
+RECOGNITION_MODEL = "japanese_g2.pth"
+DETECTION_MODEL = "craft_mlt_25k.pth"
+RECOGNITION_URL = "https://www.jaided.ai/easyocr/models/japanese_g2.pth"
+DETECTION_URL = "https://www.jaided.ai/easyocr/models/craft_mlt_25k.pth"
 
+# Ensuring the folder exists
+os.makedirs(OCR_MODEL_DIR, exist_ok=True)
+
+def download_model(file_name, url):
+    path = os.path.join(OCR_MODEL_DIR, file_name)
+    if not os.path.exists(path):
+        print(f"Downloading {file_name} ...")
+        urllib.request.urlretrieve(url, path)
+        print(f"Saved to {path}")
+
+# Downloading the models
+download_model(RECOGNITION_MODEL, RECOGNITION_URL)
+download_model(DETECTION_MODEL, DETECTION_URL)
+
+# Set reader
 reader = easyocr.Reader(['ja'], gpu=True, model_storage_directory='models/ocr')
 
 def get_clipboard_image():
