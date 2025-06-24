@@ -6,6 +6,11 @@ import urllib.request
 import torch
 
 
+import logging
+logging.getLogger("PIL").setLevel(logging.WARNING)
+
+
+
 # CONS
 OCR_MODEL_DIR = "models/ocr"
 RECOGNITION_MODEL = "japanese_g2.pth"
@@ -34,12 +39,11 @@ use_gpu = torch.cuda.is_available()
 # Set reader
 reader = easyocr.Reader(['ja'], gpu=use_gpu, model_storage_directory='models/ocr')
 
-def get_clipboard_image():
+def get_clipboard_image(image):
     """Returns an image from clipboard, or None if not an image."""
     img = ImageGrab.grabclipboard()
     if isinstance(img, Image.Image):
-        image = Image.open(img)
-        return image
+        return img
     return None
 
 def extract_text(image):
