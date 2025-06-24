@@ -32,7 +32,7 @@ download_model(DETECTION_MODEL, DETECTION_URL)
 use_gpu = torch.cuda.is_available()
 
 # Set reader
-reader = easyocr.Reader(['ja'], gpu=True, model_storage_directory='models/ocr')
+reader = easyocr.Reader(['ja'], gpu=use_gpu, model_storage_directory='models/ocr')
 
 def get_clipboard_image():
     """Returns an image from clipboard, or None if not an image."""
@@ -59,7 +59,6 @@ def extract_text(image):
     return "\n".join(extracted) if extracted else None
 
 def OCR(image):
-    """Performs OCR using the methods inside ocr.py"""
-    boxes, image_bgr = detect_text_boxes(image)
-    extracted_text = extract_text(boxes, image_bgr)
+
+    extracted_text = extract_text(image)
     return extracted_text
