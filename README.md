@@ -9,9 +9,10 @@
 -  **Real-Time TTS**: Automatically reads aloud Japanese text copied to your clipboard.
 -  **Speaker Tag Handling**: Option to remove speaker tags like `【Name】` commonly found in RPGMaker and WolfRPG games.
 -  **Game Compatibility**: Designed to work well with most visual novels and games that use stylized dialogue formatting.
--  **User-Friendly GUI**: Simple GUI
+-  **User-Friendly GUI**: Simple GUI.
 -  **Manual Control Over TTS**: Lets the user Force-read texts even when filtered out by the model.
-
+-  **Image OCR Support**: extracts Japanese text from images in your clipboard using OCR — Use with a snip tool for best result.
+-  **GPU Acceleration**: Optional — Uses GPU if available for faster OCR/Voice-over.
 ---
 
 ## Installation
