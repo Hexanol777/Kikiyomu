@@ -258,6 +258,17 @@ class KikiYomuApp:
         ToolTip(self.remove_speaker_checkbox, "Removes RPGMaker/WolfRPG speaker names in【Name】from the dialogue to avoid repetition.")
 
 
+        # Checkbox for OCR feature
+        self.OCR_var = tk.BooleanVar(value=False)
+        self.OCR_checkbox = ttk.Checkbutton(
+            self.right,
+            text="Image OCR",
+            variable=self.OCR_var
+        )
+        self.OCR_checkbox.pack(anchor="w", pady=(10, 0))
+        ToolTip(self.OCR_checkbox, "Enables text extraction from images using OCR")
+
+
         # Checkbox for scenarios where extracted text is being repeated
         self.remove_repetition_var = tk.BooleanVar(value=False)
         self.remove_repetition_checkbox = ttk.Checkbutton(
@@ -419,16 +430,17 @@ class KikiYomuApp:
             while self.running:
                 time.sleep(0.2)
                 text = pyperclip.paste()
-        
-                # Check for image in Clipboard
-                image = get_clipboard_image(text)
-                if image:
-                    current_hash = hash_image(image)
-                    if current_hash == self.last_image_hash:
-                        continue  # Skip if image is the same 
 
-                    self.last_image_hash = current_hash  # Update tracked hash
-                    text = OCR(image)
+                if self.OCR_var.get():
+                    # Check for image in Clipboard
+                    image = get_clipboard_image(text)
+                    if image:
+                        current_hash = hash_image(image)
+                        if current_hash == self.last_image_hash:
+                            continue  # Skip if image is the same 
+
+                        self.last_image_hash = current_hash  # Update tracked hash
+                        text = OCR(image)
 
                 if (
                     text != self.last_clip and is_valid_text(
