@@ -435,11 +435,6 @@ class KikiYomuApp:
                     # Check for image in Clipboard
                     image = get_clipboard_image(text)
                     if image:
-                        current_hash = hash_image(image)
-                        if current_hash == self.last_image_hash:
-                            continue  # Skip if image is the same 
-
-                        self.last_image_hash = current_hash  # Update tracked hash
                         text = OCR(image)
 
                 if (
@@ -450,6 +445,7 @@ class KikiYomuApp:
                     )
                 ):
                     self.last_clip = text
+                    pyperclip.copy(text)
                     self.history.append_text(text)
                     try:
                         if self.model and self.hps:
