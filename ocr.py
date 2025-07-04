@@ -24,13 +24,17 @@ os.makedirs(OCR_MODEL_DIR, exist_ok=True)
 def download_model(file_name, url):
     path = os.path.join(OCR_MODEL_DIR, file_name)
     if not os.path.exists(path):
-        print(f"Downloading {file_name} ...")
+        logging.info(f"Downloading {file_name} ...")
         urllib.request.urlretrieve(url, path)
-        print(f"Saved to {path}")
+        logging.info(f"Saved to {path}")
 
-# Downloading the models
-download_model(RECOGNITION_MODEL, RECOGNITION_URL)
-download_model(DETECTION_MODEL, DETECTION_URL)
+
+def ensure_models(): # Ensure single execution in case of future uses of multiprocessing
+    download_model(RECOGNITION_MODEL, RECOGNITION_URL)
+    download_model(DETECTION_MODEL, DETECTION_URL)
+
+
+ensure_models()
 
 
 # Safe GPU fallback
