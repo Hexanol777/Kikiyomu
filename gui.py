@@ -21,8 +21,12 @@ from ocr import get_clipboard_image, OCR
 import hashlib
 import io
 
+
+
 # --- Configuration ---
-CONFIG_PATH = "config/config.json"
+
+BASE_DIR = os.path.dirname(__file__)
+CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.json")
 SAMPLE_RATE = 22050
 SPEAKER_ID = 0
 
@@ -449,10 +453,16 @@ class KikiYomuApp:
                     self.history.append_text(text)
                     try:
                         if self.model and self.hps:
-                            processed_text = self.remove_speaker_name(text)
-                            processed_text = self.remove_consecutive_kanji_duplicates(processed_text)
-                            processed_text = self.collapse_repetitions(processed_text)          
-                            processed_text = self.word_filter(processed_text)                  
+                            processed_text = text
+                            processors = [
+                                self.remove_speaker_name,
+                                self.remove_consecutive_kanji_duplicates,
+                                self.collapse_repetitions,
+                                self.word_filter
+                                         ]
+
+                            for func in processors:
+                                processed_text = func(processed_text)               
 
                             audio = generate_audio(
                                 processed_text, self.model, self.hps, SPEAKER_ID,
