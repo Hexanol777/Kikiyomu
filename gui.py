@@ -440,6 +440,7 @@ class KikiYomuApp:
                     image = get_clipboard_image(text)
                     if image:
                         text = OCR(image)
+                        self.history.append_text(f"[OCR]: {text}")
 
                 if (
                     text != self.last_clip and is_valid_text(
