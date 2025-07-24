@@ -29,7 +29,7 @@ BASE_DIR = os.path.dirname(__file__)
 CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.json")
 SAMPLE_RATE = 22050
 SPEAKER_ID = 0
-
+ICON = 'config/icon.png'
 
 # --- TTS and Clipboard Handling Functions ---
 
@@ -210,11 +210,12 @@ class KikiYomuApp:
         self.root.title("KikiYomu")
         self.root.geometry("1000x450")
         self.root.resizable(False, False)
+        self.root.iconphoto(False, tk.PhotoImage(file=ICON))
 
         # Layout frames
-        self.root.columnconfigure(0, weight=7)  # Left (unchanged)
-        self.root.columnconfigure(1, weight=3)  # Middle (reduced)
-        self.root.columnconfigure(2, weight=5)  # Right (wider)
+        self.root.columnconfigure(0, weight=7)  # Left
+        self.root.columnconfigure(1, weight=3)  # Middle
+        self.root.columnconfigure(2, weight=5)  # Right
         
         self.root.rowconfigure(0, weight=1)
 
