@@ -4,6 +4,7 @@ import numpy as np
 import os
 import urllib.request
 import torch
+import re
 
 
 import logging
@@ -66,7 +67,28 @@ def extract_text(image):
     print ("\n".join(extracted))
     return "\n".join(extracted) if extracted else None
 
+
+
+def join_separate_lines(text):
+    """
+    Joins the seperated lines from OCR into one cohesive line
+    """
+
+    if not text:
+        return text
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    merged = "".join(lines)
+    merged = re.sub(r"。+", "。", merged)
+
+    return merged
+
+
 def OCR(image):
 
     extracted_text = extract_text(image)
+
+    if extracted_text:
+        extracted_text = join_separate_lines(extracted_text)
+
     return extracted_text

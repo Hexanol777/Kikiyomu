@@ -30,6 +30,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.json")
 SAMPLE_RATE = 22050
 SPEAKER_ID = 0
 ICON = 'config/icon.png'
+KANJI_DUPLICATE_PATTERN = re.compile(r'([\u4e00-\u9fff])\1')
 
 # --- TTS and Clipboard Handling Functions ---
 
@@ -210,7 +211,7 @@ class KikiYomuApp:
         self.root.title("KikiYomu")
         self.root.geometry("1000x450")
         self.root.resizable(False, False)
-        self.root.iconphoto(False, tk.PhotoImage(file=ICON))
+        #self.root.iconphoto(False, tk.PhotoImage(ICON))
 
         # Layout frames
         self.root.columnconfigure(0, weight=7)  # Left
@@ -373,7 +374,7 @@ class KikiYomuApp:
         #self.history.append_text(text[0:18])
         #if text[0:5] == '時時間間帯帯':
         #    text = text[18:]
-        return re.sub(r'([\u4e00-\u9fff])\1', '', text)
+        return KANJI_DUPLICATE_PATTERN.sub('', text)
 
 
     def word_filter(self, text):
@@ -456,6 +457,7 @@ class KikiYomuApp:
                     try:
                         if self.model and self.hps:
                             processed_text = text
+                            
                             processors = [
                                 self.remove_speaker_name,
                                 self.remove_consecutive_kanji_duplicates,
@@ -481,7 +483,7 @@ class KikiYomuApp:
 
 
 
-# --- Entry Point ---
+# --- Main ---
 
 def main():
     root = tk.Tk()
