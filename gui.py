@@ -14,7 +14,7 @@ import utils
 import commons
 from text import text_to_sequence
 
-import keyboard
+from pynput import keyboard as pynput_keyboard
 
 from ocr import get_clipboard_image, OCR
 
@@ -303,8 +303,8 @@ class KikiYomuApp:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.last_image_hash = None
 
-        #Keybinds
-        keyboard.add_hotkey("right shift", lambda: self.on_force_read())
+        # Keyboard listener
+        self.start_key_listener()
 
         self.start_monitoring()
 
@@ -366,6 +366,28 @@ class KikiYomuApp:
         text = ''.join(result)
 
         return text
+    
+    def start_key_listener(self):
+        def on_press(key):
+            try:
+                if key == pynput_keyboard.Key.shift_r:
+                    # Run safely on Tk thread
+                    self.root.after(0, self.on_force_read)
+            except Exception as e:
+                self.history.append_text(f"[KeyListener Error]: {e}")
+
+        self.key_listener = pynput_keyboard.Listener(on_press=on_press)
+        self.key_listener.daemon = True
+        self.key_listener.start()
+
+    def on_close(self):
+        try:
+            if hasattr(self, "key_listener"):
+                self.key_listener.stop()
+        except:
+            pass
+        self.running = False
+        self.root.destroy()
     
 
     def remove_consecutive_kanji_duplicates(self ,text):
@@ -489,6 +511,8 @@ def main():
     root = tk.Tk()
     app = KikiYomuApp(root)
     root.mainloop()
+    root.protocol("WM_DELETE_WINDOW", app.on_close)
+
 
 if __name__ == "__main__":
     main()
