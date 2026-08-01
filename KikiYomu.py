@@ -1,142 +1,281 @@
-import torch
-import sounddevice as sd  
-import numpy as np
+import tkinter as tk
+from tkinter import ttk
+
+import threading
 import time
+import os
+
 import pyperclip
+import torch
+
 from models import SynthesizerTrn
 import utils
-import commons
-from text import text_to_sequence
 
-# Configuration
-MODEL_PATH = "models/herta.pth"  # Set your model path here
-CONFIG_PATH = "config/config.json"  # Set your config path here
-SPEAKER_ID = 0  # Set your speaker ID here
-SAMPLE_RATE = 22050  # Sample rate for audio playback used by sd
+from pynput import keyboard as pynput_keyboard
 
-def is_valid_text(text):
-    """Check if clipboard content is valid text for TTS"""
+from ocr import get_clipboard_image, OCR
+from tts import generate_audio, play_audio, SPEAKER_ID
+from processor import (
+    is_valid_text,
+    remove_speaker_name,
+    remove_consecutive_kanji_duplicates,
+    collapse_repetitions,
+    word_filter,
+)
+from gui import (
+    SignEntry,
+    ModelTreeView,
+    HistoryTextBox,
+    PlaybackSlider,
+    ToolTip,
+    create_app,
+)
 
-    # Skip if text is empty
-    if not text or not isinstance(text, str):
-        return False
-    
-    # Skip if text is too long (might be something user decided to copy while program was running)
-    if len(text.strip()) > 100:
-        return False
-        
-    # Skip if text contains common image file extensions
-    image_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff']
-    if any(ext in text.lower() for ext in image_extensions):
-        return False
-        
-    # Skip if text contains opening and closing signs since they are usually voiced (besides the MC :( )
-    if text[0] == "「" and text[-1] == "」":
-        return False
 
-    # Check for jp chars (hiragana, katakana, kanji and punctuations)
-    jp_ranges = [
-        (0x3040, 0x309F),  # Hiragana
-        (0x30A0, 0x30FF),  # Katakana
-        (0x4E00, 0x9FAF),  # Common Kanji
-        (0x3400, 0x4DBF),  # Rare Kanji
-        (0x3000, 0x303F)   # Japanese punctuation/symbols
-    ]
-    
-    # Check each character in the text
-    for char in text[:20]:  # Only check first 20 chars for performance
-        char_code = ord(char)
-        for start, end in jp_ranges:
-            if start <= char_code <= end:
-                return True  # Found at least one Japanese character
-    
-    return False  # No Japanese characters found
-    
+# --- Configuration ---
 
-def generate_audio(text, model, speaker_id, 
-                   noise_scale=0.6,
-                   noise_scale_w=0.668, 
-                   length_scale=1.1): # Playback speed
-    
-    # Preprocess text
-    text = text.replace('\n', ' ').replace('\r', '').replace(" ", "")
-    text = f"_[JA]{text}__[JA]"  # Wrap with Japanese tags
-    
-    # Convert text to sequence
-    stn_tst, _ = text_to_sequence(text, hps.symbols, hps.data.text_cleaners)
-    if hps.data.add_blank:
-        stn_tst = commons.intersperse(stn_tst, 0)
-    stn_tst = torch.LongTensor(stn_tst)
-    
-    # Run inference
-    with torch.no_grad():
-        x_tst = stn_tst.unsqueeze(0).to(device)
-        x_tst_lengths = torch.LongTensor([stn_tst.size(0)]).to(device)
-        sid = torch.LongTensor([speaker_id]).to(device)
-        
-        audio = model.infer(
-            x_tst, x_tst_lengths, 
-            sid=sid, 
-            noise_scale=noise_scale,
-            noise_scale_w=noise_scale_w,
-            length_scale=length_scale
-        )[0][0, 0].data.cpu().float().numpy()
-    
-    return audio
+BASE_DIR = os.path.dirname(__file__)
+CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.json")
+ICON = os.path.join(BASE_DIR, "config", "icon.png")
 
-def play_audio(audio, sample_rate):
-    # Ensure audio is in the range [-1, 1]
-    audio = np.clip(audio, -1.0, 1.0)  # Clip to avoid invalid values
-    audio = audio.astype(np.float32)  # Ensure correct data type for sounddevice
-    
-    # Play audio
-    sd.play(audio, sample_rate)
-    sd.wait()  # Wait until the audio is finished playing
+
+# --- Application ---
+
+class KikiYomuApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("KikiYomu")
+        self.root.geometry("1000x450")
+        self.root.resizable(False, False)
+
+        # Layout
+        self.root.columnconfigure(0, weight=7)
+        self.root.columnconfigure(1, weight=3)
+        self.root.columnconfigure(2, weight=5)
+        self.root.rowconfigure(0, weight=1)
+
+        self.left   = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
+        self.middle = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
+        self.right  = ttk.Frame(root, padding=10, relief="groove", borderwidth=2)
+
+        self.left.grid(  row=0, column=0, sticky="nsew", padx=2, pady=2)
+        self.middle.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
+        self.right.grid( row=0, column=2, sticky="nsew", padx=2, pady=2)
+
+        # Left — model selector
+        ttk.Label(self.left, text="Models", font=("Segoe UI", 10, "bold")).pack()
+        self.model_tree = ModelTreeView(self.left)
+        self.model_tree.pack(fill="both", expand=True, pady=5)
+        ttk.Button(self.left, text="Select Model", command=self.load_model).pack(fill="x")
+
+        # Middle — log
+        ttk.Label(self.middle, text="Log", font=("Segoe UI", 10, "bold")).pack()
+        self.history = HistoryTextBox(self.middle)
+        self.history.pack(fill="both", expand=True, pady=5)
+
+        # Right — options
+        ttk.Label(self.right, text="Options", font=("Segoe UI", 10, "bold")).pack()
+
+        self.open_sign = SignEntry(self.right, "Opening Sign:", "「")
+        self.open_sign.pack(fill="x", pady=5)
+        ToolTip(self.open_sign, "Character marking the start of spoken dialogue. Default: 「")
+
+        self.close_sign = SignEntry(self.right, "Closing Sign:", "」")
+        self.close_sign.pack(fill="x", pady=5)
+        ToolTip(self.close_sign, "Character marking the end of spoken dialogue. Default: 」")
+
+        self.playback_slider = PlaybackSlider(self.right)
+        self.playback_slider.pack(fill="x", pady=10)
+
+        self.remove_speaker_var = tk.BooleanVar(value=False)
+        self.remove_speaker_checkbox = ttk.Checkbutton(
+            self.right, text="RPGMaker\n WolfRPG",
+            variable=self.remove_speaker_var
+        )
+        self.remove_speaker_checkbox.pack(anchor="w", pady=(10, 0))
+        ToolTip(self.remove_speaker_checkbox, "Removes 【Name】 speaker tags from dialogue.")
+
+        self.ocr_var = tk.BooleanVar(value=False)
+        self.ocr_checkbox = ttk.Checkbutton(
+            self.right, text="Image OCR",
+            variable=self.ocr_var
+        )
+        self.ocr_checkbox.pack(anchor="w", pady=(10, 0))
+        ToolTip(self.ocr_checkbox, "Extracts Japanese text from clipboard images using OCR.")
+
+        self.remove_repetition_var = tk.BooleanVar(value=False)
+        self.remove_repetition_checkbox = ttk.Checkbutton(
+            self.right, text="Repeated\nText Filter",
+            variable=self.remove_repetition_var,
+            command=self._toggle_word_filter_entry
+        )
+        self.remove_repetition_checkbox.pack(anchor="w", pady=(10, 0))
+        ToolTip(self.remove_repetition_checkbox, "Removes repetitions from extracted text. Use when Textractor can't filter them.")
+
+        self.custom_filter_label = ttk.Label(self.right, text="Words to filter\n(comma separated):")
+        self.custom_filter_entry = tk.Text(self.right, height=3, width=25)
+        # Hidden by default — revealed when repetition filter is toggled on
+        self.custom_filter_label.pack_forget()
+        self.custom_filter_entry.pack_forget()
+
+        # State
+        self.model = None
+        self.hps = None
+        self.last_clip = ""
+        self.running = False
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.start_key_listener()
+        self.start_monitoring()
+
+    # --- Model ---
+
+    def load_model(self):
+        model_file = self.model_tree.get_selected_model()
+        if not model_file:
+            self.history.append_text("No model selected.")
+            return
+
+        model_path = os.path.join("models", model_file)
+        self.hps = utils.get_hparams_from_file(CONFIG_PATH)
+        self.model = SynthesizerTrn(
+            len(self.hps.symbols),
+            self.hps.data.filter_length // 2 + 1,
+            self.hps.train.segment_size // self.hps.data.hop_length,
+            n_speakers=self.hps.data.n_speakers,
+            **self.hps.model
+        ).to(self.device)
+        utils.load_checkpoint(model_path, self.model, None)
+        self.model.eval()
+        self.model.device = self.device
+        self.history.append_text(f"Model loaded: {model_file}")
+
+    # --- TTS event handlers ---
+
+    def force_read(self, text):
+        """Synthesize and play text unconditionally (hotkey-triggered)."""
+        if self.model and self.hps:
+            self.history.append_text(f"[Force Read]: {text}")
+            audio = generate_audio(
+                text, self.model, self.hps, SPEAKER_ID,
+                length_scale=self.playback_slider.get()
+            )
+            play_audio(audio)
+        else:
+            self.history.append_text("[Force Read]: Model not loaded.")
+
+    def on_force_read(self, event=None):
+        """Hotkey handler — strips dialogue markers then force-reads."""
+        text = pyperclip.paste()
+        open_sign  = self.open_sign.get()
+        close_sign = self.close_sign.get()
+        if text.startswith(open_sign) and text.endswith(close_sign):
+            text = text[len(open_sign):-len(close_sign)].strip()
+        if is_valid_text(text, open_sign, close_sign):
+            self.force_read(text)
+
+    # --- Text processor pipeline ---
+
+    def _get_filter_words(self):
+        raw = self.custom_filter_entry.get("1.0", "end").strip()
+        return [w.strip() for w in raw.split(",") if w.strip()]
+
+    def _build_processors(self):
+        """Return the ordered list of text processor callables for the current settings."""
+        return [
+            lambda t: remove_speaker_name(t, self.remove_speaker_var.get()),
+            remove_consecutive_kanji_duplicates,
+            lambda t: collapse_repetitions(t, self.remove_repetition_var.get()),
+            lambda t: word_filter(t, self._get_filter_words()),
+        ]
+
+    # --- UI helpers ---
+
+    def _toggle_word_filter_entry(self):
+        if self.remove_repetition_var.get():
+            self.custom_filter_label.pack(anchor="w", pady=(5, 0))
+            self.custom_filter_entry.pack(fill="x")
+            self.history.append_text("WordFilter Enabled")
+        else:
+            self.custom_filter_label.pack_forget()
+            self.custom_filter_entry.pack_forget()
+            self.history.append_text("WordFilter Disabled")
+
+    # --- Hotkey listener ---
+
+    def start_key_listener(self):
+        def on_press(key):
+            try:
+                if key == pynput_keyboard.Key.shift_r:
+                    self.root.after(0, self.on_force_read)
+            except Exception as e:
+                self.history.append_text(f"[KeyListener Error]: {e}")
+
+        self.key_listener = pynput_keyboard.Listener(on_press=on_press)
+        self.key_listener.daemon = True
+        self.key_listener.start()
+
+    # --- Clipboard monitoring loop ---
+
+    def start_monitoring(self):
+        self.history.append_text("Monitoring has started.")
+        self.history.append_text(f"Inference device: {self.device}\n")
+        self.history.append_text("Available Hotkeys:\n  Right Shift  →  Force read current clipboard text")
+
+        def loop():
+            self.running = True
+            while self.running:
+                time.sleep(0.2)
+                text = pyperclip.paste()
+
+                if self.ocr_var.get():
+                    image = get_clipboard_image(text)
+                    if image:
+                        text = OCR(image)
+                        self.history.append_text(f"[OCR]: {text}")
+
+                open_sign  = self.open_sign.get()
+                close_sign = self.close_sign.get()
+
+                if text != self.last_clip and is_valid_text(text, open_sign, close_sign):
+                    self.last_clip = text
+                    pyperclip.copy(text)
+                    self.history.append_text(text)
+                    try:
+                        if self.model and self.hps:
+                            processed = text
+                            for fn in self._build_processors():
+                                processed = fn(processed)
+                            audio = generate_audio(
+                                processed, self.model, self.hps, SPEAKER_ID,
+                                length_scale=self.playback_slider.get()
+                            )
+                            play_audio(audio)
+                        else:
+                            self.history.append_text("Model not loaded.")
+                    except Exception as e:
+                        self.history.append_text(f"Error: {e}")
+
+        threading.Thread(target=loop, daemon=True).start()
+
+    # --- Cleanup ---
+
+    def on_close(self):
+        try:
+            if hasattr(self, "key_listener"):
+                self.key_listener.stop()
+        except Exception:
+            pass
+        self.running = False
+        self.root.destroy()
+
+
+# --- Entry point ---
 
 def main():
-    # Initialize model
-    global hps, device
-    hps = utils.get_hparams_from_file(CONFIG_PATH)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    model = SynthesizerTrn(
-        len(hps.symbols),
-        hps.data.filter_length // 2 + 1,
-        hps.train.segment_size // hps.data.hop_length,
-        n_speakers=hps.data.n_speakers,
-        **hps.model
-    ).to(device)
-    
-    utils.load_checkpoint(MODEL_PATH, model, None)
-    model.eval()
+    root = create_app(KikiYomuApp)
+    root.mainloop()
 
-    # Clipboard monitoring
-    last_clipboard_content = pyperclip.paste()  # Initialize with current clipboard content
-
-    print("Clipboard monitoring started. Copy Japanese text to synthesize and play audio...")
-
-    while True:
-        time.sleep(0.2)
-        current_clipboard_content = pyperclip.paste()
-
-        # Skip if clipboard unchanged or invalid
-        if current_clipboard_content == last_clipboard_content or not is_valid_text(current_clipboard_content):
-            time.sleep(0.2)
-            continue
-
-        else:
-            if current_clipboard_content != last_clipboard_content:
-                
-                # Generate and play audio
-                try:
-                    audio = generate_audio(current_clipboard_content, model, SPEAKER_ID)
-                    play_audio(audio, SAMPLE_RATE)
-                except Exception as e:
-                    print(f"Error generating or playing audio: {e}")
-    
-                last_clipboard_content = current_clipboard_content  # Update last clipboard content
-
-        time.sleep(1)
 
 if __name__ == "__main__":
     main()
