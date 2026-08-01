@@ -1,6 +1,6 @@
 # KikiYomu
 
-**KikiYomu** is a lightweight, real-time Text-to-Speech (TTS) application that monitors your clipboard and instantly uses AI voice models to have anime-style characters narrate Japanese text from games or visual novels.
+**KikiYomu** is a lightweight, real-time Text-to-Speech (TTS) application that monitors your clipboard and instantly uses AI voice models to narrate Japanese text from games or visual novels.
 
 ---
 
