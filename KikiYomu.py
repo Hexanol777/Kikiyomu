@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 
 import threading
 import time
@@ -25,16 +25,17 @@ from processor import (
 )
 from gui import (
     SignEntry,
-    ModelTreeView,
+    ModelListView,
     HistoryTextBox,
     PlaybackSlider,
+    KikiCheckBox,
     ToolTip,
     create_app,
     P,
 )
 
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR   = os.path.dirname(__file__)
 CONFIG_PATH = os.path.join(BASE_DIR, "config", "config.json")
 
 
@@ -42,137 +43,143 @@ class KikiYomuApp:
     def __init__(self, root):
         self.root = root
         self.root.title("KikiYomu")
-        self.root.geometry("1040x500")
+        self.root.geometry("1060x520")
         self.root.resizable(False, False)
 
-        self.root.columnconfigure(0, weight=2, minsize=180)   # Models
-        self.root.columnconfigure(1, weight=5, minsize=400)   # Log
-        self.root.columnconfigure(2, weight=3, minsize=230)   # Options
-        self.root.rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=2, minsize=190)
+        self.root.grid_columnconfigure(1, weight=5, minsize=420)
+        self.root.grid_columnconfigure(2, weight=3, minsize=240)
+        self.root.grid_rowconfigure(0, weight=1)
 
-        self.left   = ttk.Frame(root, padding=(12, 10))
-        self.middle = ttk.Frame(root, padding=(0, 10))
-        self.right  = ttk.Frame(root, padding=(12, 10))
+        self.left   = ctk.CTkFrame(root, fg_color=P["panel"], corner_radius=8)
+        self.middle = ctk.CTkFrame(root, fg_color=P["panel"], corner_radius=8)
+        self.right  = ctk.CTkFrame(root, fg_color=P["panel"], corner_radius=8)
 
-        self.left.grid(  row=0, column=0, sticky="nsew", padx=(8, 2), pady=8)
-        self.middle.grid(row=0, column=1, sticky="nsew", padx=2,       pady=8)
-        self.right.grid( row=0, column=2, sticky="nsew", padx=(2, 8), pady=8)
+        self.left.grid(  row=0, column=0, padx=(8, 3), pady=8, sticky="nsew")
+        self.middle.grid(row=0, column=1, padx=3,       pady=8, sticky="nsew")
+        self.right.grid( row=0, column=2, padx=(3, 8), pady=8, sticky="nsew")
 
         self._build_left()
         self._build_center()
         self._build_right()
 
         # State
-        self.model = None
-        self.hps = None
+        self.model    = None
+        self.hps      = None
         self.last_clip = ""
-        self.running = False
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.running  = False
+        self.device   = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.start_key_listener()
         self.start_monitoring()
 
-    # ── Panel builders ─────────────────────────────────────────────────────────
+    # ── Layout ────────────────────────────────────────────────────────────────
 
     def _section_label(self, parent, text):
-        tk.Label(
+        ctk.CTkLabel(
             parent, text=text,
-            fg=P["muted"], bg=P["panel"],
-            font=("Segoe UI", 8, "bold"), anchor="w",
-        ).pack(fill="x", pady=(0, 8))
+            text_color=P["muted"], fg_color="transparent",
+            font=("Segoe UI", 9, "bold"), anchor="w",
+        ).pack(fill="x", padx=12, pady=(10, 6))
 
     def _build_left(self):
         self._section_label(self.left, "MODELS")
-        self.model_tree = ModelTreeView(self.left)
-        self.model_tree.pack(fill="both", expand=True, pady=(0, 8))
-        self.load_btn = ttk.Button(self.left, text="Load Model", command=self.load_model)
-        self.load_btn.pack(fill="x")
+
+        self.model_list = ModelListView(self.left)
+        self.model_list.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+
+        self.load_btn = ctk.CTkButton(
+            self.left, text="Load Model",
+            fg_color=P["accent"],
+            hover_color="#b8a3fb",
+            text_color=P["bg"],
+            font=("Segoe UI", 12, "bold"),
+            corner_radius=6,
+            height=34,
+            command=self.load_model,
+        )
+        self.load_btn.pack(fill="x", padx=8, pady=(0, 10))
 
     def _build_center(self):
-        # Thin left accent bar as a visual anchor for the main panel
-        tk.Frame(self.middle, bg=P["accent"], width=2).pack(side="left", fill="y")
+        # 3-px accent stripe on the left edge of the log panel
+        tk.Frame(self.middle, bg=P["accent"], width=3).pack(side="left", fill="y")
 
-        content = ttk.Frame(self.middle, padding=(8, 0, 0, 0))
-        content.pack(fill="both", expand=True)
+        inner = ctk.CTkFrame(self.middle, fg_color="transparent")
+        inner.pack(side="left", fill="both", expand=True, padx=(6, 8), pady=0)
 
-        self._section_label(content, "ACTIVITY LOG")
-        self.history = HistoryTextBox(content)
-        self.history.pack(fill="both", expand=True)
+        self._section_label(inner, "ACTIVITY LOG")
+        self.history = HistoryTextBox(inner)
+        self.history.pack(fill="both", expand=True, pady=(0, 8))
 
     def _build_right(self):
         self._section_label(self.right, "OPTIONS")
 
         self.open_sign = SignEntry(self.right, "Opening sign", "「")
-        self.open_sign.pack(fill="x", pady=(0, 6))
-        ToolTip(self.open_sign, "Character marking the start of spoken dialogue.\nDefault: 「")
+        self.open_sign.pack(fill="x", padx=12, pady=(0, 6))
+        ToolTip(self.open_sign, "Start-of-dialogue marker.\nDefault: 「")
 
         self.close_sign = SignEntry(self.right, "Closing sign", "」")
-        self.close_sign.pack(fill="x", pady=(0, 10))
-        ToolTip(self.close_sign, "Character marking the end of spoken dialogue.\nDefault: 」")
+        self.close_sign.pack(fill="x", padx=12, pady=(0, 10))
+        ToolTip(self.close_sign, "End-of-dialogue marker.\nDefault: 」")
 
         self.playback_slider = PlaybackSlider(self.right)
-        self.playback_slider.pack(fill="x", pady=(0, 12))
+        self.playback_slider.pack(fill="x", padx=12, pady=(0, 12))
 
-        tk.Frame(self.right, bg=P["border"], height=1).pack(fill="x", pady=(0, 10))
+        tk.Frame(self.right, bg=P["border"], height=1).pack(fill="x", padx=12, pady=(0, 10))
 
         self.remove_speaker_var = tk.BooleanVar(value=False)
-        cb_rpg = ttk.Checkbutton(
-            self.right, text="RPGMaker / WolfRPG",
-            variable=self.remove_speaker_var,
-        )
-        cb_rpg.pack(anchor="w", pady=(0, 6))
-        ToolTip(cb_rpg, "Strips 【Name】 speaker tags from the\nstart of dialogue lines.")
+        cb_rpg = KikiCheckBox(self.right, "RPGMaker / WolfRPG", self.remove_speaker_var)
+        cb_rpg.pack(anchor="w", padx=12, pady=(0, 6))
+        ToolTip(cb_rpg, "Strips 【Name】 speaker tags\nfrom the start of dialogue lines.")
 
         self.ocr_var = tk.BooleanVar(value=False)
-        cb_ocr = ttk.Checkbutton(self.right, text="Image OCR", variable=self.ocr_var)
-        cb_ocr.pack(anchor="w", pady=(0, 6))
+        cb_ocr = KikiCheckBox(self.right, "Image OCR", self.ocr_var)
+        cb_ocr.pack(anchor="w", padx=12, pady=(0, 6))
         ToolTip(cb_ocr, "Extract Japanese text from clipboard images.\nBest used with a snipping tool.")
 
         self.remove_repetition_var = tk.BooleanVar(value=False)
-        cb_rep = ttk.Checkbutton(
-            self.right, text="Repeated Text Filter",
-            variable=self.remove_repetition_var,
-            command=self._toggle_word_filter_entry,
+        cb_rep = KikiCheckBox(
+            self.right, "Repeated Text Filter",
+            self.remove_repetition_var,
+            command=self._toggle_word_filter,
         )
-        cb_rep.pack(anchor="w", pady=(0, 6))
-        ToolTip(cb_rep, "Removes repeated substrings from extracted text.\nUse when Textractor can't filter them.")
+        cb_rep.pack(anchor="w", padx=12, pady=(0, 6))
+        ToolTip(cb_rep, "Collapses repeated substrings.\nUse when Textractor can't filter them.")
 
-        self._filter_label = tk.Label(
+        self._filter_label = ctk.CTkLabel(
             self.right, text="Words to filter (comma-separated):",
-            fg=P["muted"], bg=P["panel"],
-            font=("Segoe UI", 8), anchor="w",
+            text_color=P["muted"], fg_color="transparent",
+            font=("Segoe UI", 10), anchor="w",
         )
         self.custom_filter_entry = tk.Text(
             self.right, height=3,
             bg=P["surface"], fg=P["text"],
             insertbackground=P["text"],
             relief="flat", borderwidth=0,
-            font=("Segoe UI", 9),
-            padx=6, pady=4,
+            font=("Segoe UI", 10),
+            padx=8, pady=6,
         )
         # Hidden until repetition filter is enabled
         self._filter_label.pack_forget()
         self.custom_filter_entry.pack_forget()
 
-    # ── Thread-safe helpers ────────────────────────────────────────────────────
+    # ── Thread-safe helpers ───────────────────────────────────────────────────
 
     def _log(self, msg, tag="info"):
-        """Post a log message to the history box from any thread."""
         self.root.after(0, lambda m=msg, t=tag: self.history.append_text(m, t))
 
     def _set_status(self, state):
-        """Update the status bar from any thread."""
         self.root.after(0, lambda s=state: self.history.set_status(s))
 
-    # ── Model loading ──────────────────────────────────────────────────────────
+    # ── Model loading ─────────────────────────────────────────────────────────
 
     def load_model(self):
-        model_file = self.model_tree.get_selected_model()
+        model_file = self.model_list.get_selected_model()
         if not model_file:
             self._log("No model selected.", "warn")
             return
 
-        self.load_btn.config(state="disabled")
+        self.load_btn.configure(state="disabled")
         self._log(f"Loading {model_file}…", "info")
         self._set_status("loading")
 
@@ -185,13 +192,12 @@ class KikiYomuApp:
                     hps.data.filter_length // 2 + 1,
                     hps.train.segment_size // hps.data.hop_length,
                     n_speakers=hps.data.n_speakers,
-                    **hps.model
+                    **hps.model,
                 ).to(self.device)
                 utils.load_checkpoint(model_path, model, None)
                 model.eval()
                 model.device = self.device
-                # Commit to instance only after full success
-                self.hps = hps
+                self.hps   = hps
                 self.model = model
                 self._log(f"Ready — {model_file}", "success")
             except Exception as e:
@@ -200,26 +206,25 @@ class KikiYomuApp:
                 time.sleep(2)
             finally:
                 self._set_status("idle")
-                self.root.after(0, lambda: self.load_btn.config(state="normal"))
+                self.root.after(0, lambda: self.load_btn.configure(state="normal"))
 
         threading.Thread(target=_load, daemon=True).start()
 
-    # ── TTS event handlers ─────────────────────────────────────────────────────
+    # ── TTS handlers ──────────────────────────────────────────────────────────
 
     def force_read(self, text):
-        """Synthesize and play text unconditionally — always runs in a thread."""
         if not (self.model and self.hps):
             self._log("No model loaded.", "warn")
             return
 
         def _play():
             try:
-                sd.stop()   # interrupt whatever is currently playing
+                sd.stop()
                 self._log(f"[Force] {text}", "force")
                 self._set_status("generating")
                 audio = generate_audio(
                     text, self.model, self.hps, SPEAKER_ID,
-                    length_scale=self.playback_slider.get()
+                    length_scale=self.playback_slider.get(),
                 )
                 self._set_status("playing")
                 play_audio(audio)
@@ -233,8 +238,7 @@ class KikiYomuApp:
         threading.Thread(target=_play, daemon=True).start()
 
     def on_force_read(self, event=None):
-        """Hotkey handler — strips dialogue markers then delegates to force_read."""
-        text = pyperclip.paste()
+        text       = pyperclip.paste()
         open_sign  = self.open_sign.get()
         close_sign = self.close_sign.get()
         if text.startswith(open_sign) and text.endswith(close_sign):
@@ -242,7 +246,7 @@ class KikiYomuApp:
         if is_valid_text(text, open_sign, close_sign):
             self.force_read(text)
 
-    # ── Text processor pipeline ────────────────────────────────────────────────
+    # ── Text processor pipeline ───────────────────────────────────────────────
 
     def _get_filter_words(self):
         raw = self.custom_filter_entry.get("1.0", "end").strip()
@@ -256,19 +260,19 @@ class KikiYomuApp:
             lambda t: word_filter(t, self._get_filter_words()),
         ]
 
-    # ── UI helpers ─────────────────────────────────────────────────────────────
+    # ── UI helpers ────────────────────────────────────────────────────────────
 
-    def _toggle_word_filter_entry(self):
+    def _toggle_word_filter(self):
         if self.remove_repetition_var.get():
-            self._filter_label.pack(fill="x", pady=(6, 2))
-            self.custom_filter_entry.pack(fill="x")
+            self._filter_label.pack(fill="x", padx=12, pady=(6, 2))
+            self.custom_filter_entry.pack(fill="x", padx=12)
             self._log("Word filter enabled.", "info")
         else:
             self._filter_label.pack_forget()
             self.custom_filter_entry.pack_forget()
             self._log("Word filter disabled.", "info")
 
-    # ── Hotkey listener ────────────────────────────────────────────────────────
+    # ── Hotkey listener ───────────────────────────────────────────────────────
 
     def start_key_listener(self):
         def on_press(key):
@@ -282,7 +286,7 @@ class KikiYomuApp:
         self.key_listener.daemon = True
         self.key_listener.start()
 
-    # ── Clipboard monitoring loop ──────────────────────────────────────────────
+    # ── Clipboard monitoring loop ─────────────────────────────────────────────
 
     def start_monitoring(self):
         self._log("Monitoring started.", "info")
@@ -293,16 +297,15 @@ class KikiYomuApp:
             self.running = True
             while self.running:
                 time.sleep(0.2)
-                text = pyperclip.paste()
+                text       = pyperclip.paste()
+                open_sign  = self.open_sign.get()
+                close_sign = self.close_sign.get()
 
                 if self.ocr_var.get():
                     image = get_clipboard_image(text)
                     if image:
                         text = OCR(image)
                         self._log(f"[OCR] {text}", "ocr")
-
-                open_sign  = self.open_sign.get()
-                close_sign = self.close_sign.get()
 
                 if text != self.last_clip and is_valid_text(text, open_sign, close_sign):
                     self.last_clip = text
@@ -314,11 +317,10 @@ class KikiYomuApp:
                             processed = text
                             for fn in self._build_processors():
                                 processed = fn(processed)
-
                             self._set_status("generating")
                             audio = generate_audio(
                                 processed, self.model, self.hps, SPEAKER_ID,
-                                length_scale=self.playback_slider.get()
+                                length_scale=self.playback_slider.get(),
                             )
                             self._set_status("playing")
                             play_audio(audio)
@@ -333,7 +335,7 @@ class KikiYomuApp:
 
         threading.Thread(target=loop, daemon=True).start()
 
-    # ── Cleanup ────────────────────────────────────────────────────────────────
+    # ── Cleanup ───────────────────────────────────────────────────────────────
 
     def on_close(self):
         try:
@@ -345,7 +347,7 @@ class KikiYomuApp:
         self.root.destroy()
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
     root = create_app(KikiYomuApp)
