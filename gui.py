@@ -1,25 +1,27 @@
 import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 import time as _time
+import os
 
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("dark-blue")
 
-# ── Design tokens ──────────────────────────────────────────────────────────────
+# ── Palette ────────────────────────────────────────────────────────────────────
 P = {
-    "bg":      "#16171d",   # root / window
-    "panel":   "#1e1f29",   # panel backgrounds
-    "surface": "#262733",   # inputs, treeview, text areas
-    "border":  "#31334a",   # dividers, separators
-    "accent":  "#a78bfa",   # interactive, current state
-    "text":    "#dddde8",   # primary text
-    "muted":   "#636680",   # labels, timestamps, secondary text
-    "success": "#86efac",   # model loaded, playing
-    "error":   "#f87171",   # errors
-    "warn":    "#fbbf24",   # warnings, loading state
-    "ocr":     "#67e8f9",   # OCR output
-    "force":   "#fb923c",   # force read
+    "bg":      "#16171d",
+    "panel":   "#1e1f29",
+    "surface": "#262733",
+    "border":  "#31334a",
+    "accent":  "#a78bfa",
+    "text":    "#dddde8",
+    "muted":   "#636680",
+    "success": "#86efac",
+    "error":   "#f87171",
+    "warn":    "#fbbf24",
+    "ocr":     "#67e8f9",
+    "force":   "#fb923c",
 }
 
-# Status bar states → (label text, color)
 STATUS_CONFIG = {
     "idle":       ("● Idle",        P["muted"]),
     "loading":    ("● Loading…",    P["warn"]),
@@ -28,156 +30,88 @@ STATUS_CONFIG = {
     "error":      ("● Error",       P["error"]),
 }
 
-
-def setup_theme(root):
-    """Apply the dark ttk theme to the root window."""
-    root.configure(bg=P["bg"])
-    style = ttk.Style(root)
-    style.theme_use("clam")
-
-    style.configure("TFrame",
-        background=P["panel"],
-    )
-    style.configure("TLabel",
-        background=P["panel"],
-        foreground=P["text"],
-        font=("Segoe UI", 9),
-    )
-    style.configure("TButton",
-        background=P["surface"],
-        foreground=P["accent"],
-        borderwidth=0,
-        focusthickness=0,
-        font=("Segoe UI", 9, "bold"),
-        padding=(10, 6),
-        relief="flat",
-    )
-    style.map("TButton",
-        background=[("active",   P["accent"]), ("pressed",   P["accent"]), ("disabled", P["surface"])],
-        foreground=[("active",   P["bg"]),     ("pressed",   P["bg"]),     ("disabled", P["muted"])],
-        relief=[("pressed", "flat")],
-    )
-    style.configure("TEntry",
-        fieldbackground=P["surface"],
-        foreground=P["text"],
-        insertcolor=P["text"],
-        bordercolor=P["border"],
-        lightcolor=P["surface"],
-        darkcolor=P["surface"],
-        selectbackground=P["accent"],
-        selectforeground=P["bg"],
-        padding=(4, 4),
-    )
-    style.configure("TCheckbutton",
-        background=P["panel"],
-        foreground=P["text"],
-        font=("Segoe UI", 9),
-        focusthickness=0,
-        indicatorcolor=P["surface"],
-        indicatorrelief="flat",
-    )
-    style.map("TCheckbutton",
-        background=[("active", P["panel"])],
-        foreground=[("active", P["accent"])],
-        indicatorcolor=[("selected", P["accent"]), ("pressed", P["accent"])],
-    )
-    style.configure("Treeview",
-        background=P["surface"],
-        foreground=P["text"],
-        fieldbackground=P["surface"],
-        borderwidth=0,
-        rowheight=26,
-        font=("Segoe UI", 9),
-    )
-    style.configure("Treeview.Heading",
-        background=P["panel"],
-        foreground=P["muted"],
-        borderwidth=0,
-        font=("Segoe UI", 8, "bold"),
-        relief="flat",
-    )
-    style.map("Treeview",
-        background=[("selected", P["accent"])],
-        foreground=[("selected", P["bg"])],
-    )
-    style.map("Treeview.Heading",
-        background=[("active", P["panel"])],
-        relief=[("active", "flat")],
-    )
-    style.configure("Vertical.TScrollbar",
-        background=P["border"],
-        troughcolor=P["panel"],
-        borderwidth=0,
-        arrowsize=0,
-        width=5,
-        relief="flat",
-    )
-    style.map("Vertical.TScrollbar",
-        background=[("active", P["muted"]), ("pressed", P["accent"])],
-    )
-    style.configure("TScale",
-        background=P["panel"],
-        troughcolor=P["surface"],
-        sliderlength=12,
-        sliderrelief="flat",
-        borderwidth=0,
-    )
-    style.map("TScale",
-        background=[("active", P["panel"])],
-        troughcolor=[("active", P["surface"])],
-    )
+_FONT_UI   = ("Segoe UI", 12)
+_FONT_MONO = ("Consolas", 9)
+_FONT_SMALL = ("Segoe UI", 10)
 
 
 # ── Widgets ────────────────────────────────────────────────────────────────────
 
-class SignEntry(ttk.Frame):
+class SignEntry(ctk.CTkFrame):
     def __init__(self, parent, label_text, default_value=""):
-        super().__init__(parent)
-        tk.Label(
+        super().__init__(parent, fg_color="transparent")
+        ctk.CTkLabel(
             self, text=label_text,
-            fg=P["muted"], bg=P["panel"],
-            font=("Segoe UI", 8),
-        ).pack(anchor="w")
-        self.entry = ttk.Entry(self)
-        self.entry.pack(fill="x", ipady=3)
-        self.entry.insert(0, default_value)
+            text_color=P["muted"], fg_color="transparent",
+            font=_FONT_SMALL, anchor="w",
+        ).pack(fill="x")
+        self._entry = ctk.CTkEntry(
+            self,
+            fg_color=P["surface"],
+            border_color=P["border"],
+            text_color=P["text"],
+            border_width=1,
+            corner_radius=4,
+            font=_FONT_UI,
+        )
+        self._entry.pack(fill="x", pady=(2, 0), ipady=2)
+        self._entry.insert(0, default_value)
 
     def get(self):
-        return self.entry.get()
+        return self._entry.get()
 
 
-class ModelTreeView(ttk.Frame):
+class ModelListView(ctk.CTkScrollableFrame):
+    """Replaces ttk.Treeview — clean clickable rows, no border artifacts."""
+
     def __init__(self, parent, models_dir="models"):
-        super().__init__(parent)
-        self.models_dir = models_dir
-
-        self.tree = ttk.Treeview(
-            self, columns=("Model",), show="headings", selectmode="browse"
+        super().__init__(
+            parent,
+            fg_color=P["surface"],
+            corner_radius=6,
+            scrollbar_button_color=P["border"],
+            scrollbar_button_hover_color=P["muted"],
         )
-        self.tree.heading("Model", text="Available Models")
-        self.tree.column("Model", anchor="w", stretch=True)
-        self.tree.pack(side="left", fill="both", expand=True)
+        self._models_dir = models_dir
+        self._selected = None
+        self._buttons = {}
+        self._load()
 
-        sb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
-        sb.pack(side="right", fill="y")
-        self.tree.config(yscrollcommand=sb.set)
-
-        self.load_models()
-
-    def load_models(self):
-        import os
-        os.makedirs(self.models_dir, exist_ok=True)
-        for model in os.listdir(self.models_dir):
+    def _load(self):
+        os.makedirs(self._models_dir, exist_ok=True)
+        for model in sorted(os.listdir(self._models_dir)):
             if model.endswith(".pth"):
-                self.tree.insert("", "end", values=(model,))
+                btn = ctk.CTkButton(
+                    self,
+                    text=model,
+                    anchor="w",
+                    fg_color="transparent",
+                    text_color=P["text"],
+                    hover_color=P["border"],
+                    font=_FONT_UI,
+                    corner_radius=4,
+                    height=30,
+                    command=lambda m=model: self._select(m),
+                )
+                btn.pack(fill="x", padx=4, pady=1)
+                self._buttons[model] = btn
+
+    def _select(self, model):
+        if self._selected and self._selected in self._buttons:
+            self._buttons[self._selected].configure(
+                fg_color="transparent", text_color=P["text"]
+            )
+        self._selected = model
+        self._buttons[model].configure(
+            fg_color=P["accent"], text_color=P["bg"]
+        )
 
     def get_selected_model(self):
-        sel = self.tree.selection()
-        return self.tree.item(sel[0])["values"][0] if sel else None
+        return self._selected
 
 
-class HistoryTextBox(ttk.Frame):
-    """Scrollable log panel with color-coded tags, timestamps, and a status bar."""
+class HistoryTextBox(ctk.CTkFrame):
+    """Scrollable log with color-coded tags, timestamps, and a live status bar."""
 
     _TAG_COLORS = {
         "info":    P["muted"],
@@ -190,32 +124,32 @@ class HistoryTextBox(ttk.Frame):
     }
 
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, fg_color=P["panel"], corner_radius=6)
 
-        # Status bar — packed first so it anchors at the bottom
+        # Status bar anchors at the bottom — pack before expanding area
         tk.Frame(self, bg=P["border"], height=1).pack(side="bottom", fill="x")
 
-        self._status_bar = tk.Frame(self, bg=P["panel"], height=24)
-        self._status_bar.pack(side="bottom", fill="x")
-        self._status_bar.pack_propagate(False)
+        _sb_row = tk.Frame(self, bg=P["panel"], height=26)
+        _sb_row.pack(side="bottom", fill="x")
+        _sb_row.pack_propagate(False)
 
         self._status_lbl = tk.Label(
-            self._status_bar, text="● Idle",
+            _sb_row, text="● Idle",
             fg=P["muted"], bg=P["panel"],
             font=("Segoe UI", 8), anchor="w",
         )
-        self._status_lbl.pack(side="left", padx=8, pady=4)
+        self._status_lbl.pack(side="left", padx=10, pady=4)
 
         self._time_lbl = tk.Label(
-            self._status_bar, text="",
+            _sb_row, text="",
             fg=P["muted"], bg=P["panel"],
             font=("Consolas", 8), anchor="e",
         )
-        self._time_lbl.pack(side="right", padx=8, pady=4)
+        self._time_lbl.pack(side="right", padx=10, pady=4)
 
         # Log text area
-        inner = tk.Frame(self, bg=P["panel"])
-        inner.pack(fill="both", expand=True)
+        inner = tk.Frame(self, bg=P["surface"])
+        inner.pack(fill="both", expand=True, padx=1, pady=(1, 0))
 
         self.text = tk.Text(
             inner,
@@ -226,21 +160,25 @@ class HistoryTextBox(ttk.Frame):
             insertbackground=P["text"],
             relief="flat",
             borderwidth=0,
-            font=("Consolas", 9),
+            font=_FONT_MONO,
             padx=10, pady=8,
             cursor="arrow",
             selectbackground=P["accent"],
             selectforeground=P["bg"],
         )
-        sb = ttk.Scrollbar(inner, orient="vertical", command=self.text.yview)
+        sb = ctk.CTkScrollbar(
+            inner,
+            command=self.text.yview,
+            button_color=P["border"],
+            button_hover_color=P["muted"],
+            minimum_pixel_length=20,
+        )
         self.text.config(yscrollcommand=sb.set)
-        sb.pack(side="right", fill="y")
+        sb.pack(side="right", fill="y", pady=2)
         self.text.pack(side="left", fill="both", expand=True)
 
-        # Register color tags
         for tag, color in self._TAG_COLORS.items():
             self.text.tag_configure(tag, foreground=color)
-        # Timestamp tag — dimmed, slightly smaller
         self.text.tag_configure("ts", foreground=P["muted"], font=("Consolas", 8))
 
     def append_text(self, msg, tag="info"):
@@ -257,39 +195,70 @@ class HistoryTextBox(ttk.Frame):
         self._status_lbl.config(text=label, fg=color)
 
 
-class PlaybackSlider(ttk.Frame):
+class PlaybackSlider(ctk.CTkFrame):
     def __init__(self, parent, from_=0.5, to=2.0, initial=1.0):
-        super().__init__(parent)
+        super().__init__(parent, fg_color="transparent")
 
-        tk.Label(
-            self, text="Playback Speed",
-            fg=P["muted"], bg=P["panel"],
-            font=("Segoe UI", 8),
-        ).pack(anchor="w")
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x")
+        ctk.CTkLabel(
+            header, text="Playback Speed",
+            text_color=P["muted"], fg_color="transparent",
+            font=_FONT_SMALL, anchor="w",
+        ).pack(side="left")
+        self._lbl = ctk.CTkLabel(
+            header, text=f"{initial:.2f}×",
+            text_color=P["accent"], fg_color="transparent",
+            font=("Segoe UI", 11, "bold"), anchor="e",
+            width=50,
+        )
+        self._lbl.pack(side="right")
 
         self._var = tk.DoubleVar(value=initial)
-        ttk.Scale(
-            self, from_=from_, to=to,
-            variable=self._var, orient="horizontal",
-        ).pack(fill="x", pady=(2, 0))
-
-        self._lbl = tk.Label(
-            self, text=f"{initial:.2f}×",
-            fg=P["accent"], bg=P["panel"],
-            font=("Segoe UI", 9, "bold"),
-        )
-        self._lbl.pack(anchor="center")
+        ctk.CTkSlider(
+            self,
+            from_=from_, to=to,
+            variable=self._var,
+            button_color=P["accent"],
+            button_hover_color=P["accent"],
+            progress_color=P["accent"],
+            fg_color=P["surface"],
+            number_of_steps=30,
+        ).pack(fill="x", pady=(4, 0))
 
         def _update(*_):
             v = round(float(self._var.get()) / 0.05) * 0.05
             self._var.set(v)
-            self._lbl.config(text=f"{v:.2f}×")
+            self._lbl.configure(text=f"{v:.2f}×")
 
         self._var.trace_add("write", _update)
 
     def get(self):
         v = self._var.get()
         return 1.0 / v if v != 0 else 1.0
+
+
+class KikiCheckBox(ctk.CTkCheckBox):
+    """Checkbox styled as a filled-square indicator in accent color."""
+
+    def __init__(self, parent, text, variable, command=None):
+        super().__init__(
+            parent,
+            text=text,
+            variable=variable,
+            command=command,
+            # Checked state: filled accent square
+            fg_color=P["accent"],
+            hover_color=P["accent"],
+            checkmark_color=P["bg"],   # dark mark on purple = subtle tick
+            # Unchecked state
+            border_color=P["muted"],
+            border_width=2,
+            corner_radius=3,           # square-ish
+            # Text
+            text_color=P["text"],
+            font=_FONT_UI,
+        )
 
 
 class ToolTip:
@@ -303,12 +272,8 @@ class ToolTip:
     def _show(self, _=None):
         if self._tip or not self.text:
             return
-        try:
-            x, y, _, cy = self.widget.bbox("insert")
-        except Exception:
-            x, y, cy = 0, 0, 0
-        x += self.widget.winfo_rootx() + 28
-        y += self.widget.winfo_rooty() + cy + 14
+        x = self.widget.winfo_rootx() + self.widget.winfo_width() + 6
+        y = self.widget.winfo_rooty() + (self.widget.winfo_height() // 2) - 14
         self._tip = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
         tw.wm_geometry(f"+{x}+{y}")
@@ -326,8 +291,8 @@ class ToolTip:
 
 
 def create_app(app_class):
-    root = tk.Tk()
-    setup_theme(root)
+    root = ctk.CTk()
+    root.configure(fg_color=P["bg"])
     app = app_class(root)
     root.protocol("WM_DELETE_WINDOW", app.on_close)
     return root
